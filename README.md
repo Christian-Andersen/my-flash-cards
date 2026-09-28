@@ -209,6 +209,17 @@ discard real progress to buy nothing. A session saved before the seed existed
 comes back in a new random order, which is a reasonable thing to happen the first
 time the new build runs.
 
+**Why the study view is capped at one screen but the settings view is not.** The
+page was `min-h-dvh`, so it grew to whatever the card needed: the answer face
+asked for 70% of the screen while the header, progress bar, and controls took
+another ~240px. On a phone that is more than the viewport, so every card
+scrolled the page — including the question view, because the hidden answer face
+still set the height of the cell both faces share. The study column is now
+exactly `h-dvh`, the card takes the space the rest of the page leaves over, and
+each face scrolls its own content when it will not fit. The settings view keeps
+`min-h-dvh`, because the category list really is taller than a phone and
+bounding it would clip the toggles.
+
 **Why the confirmation is not a native `<dialog>`.** A native dialog brings focus
 trapping and <kbd>Esc</kbd> handling for free, but jsdom does not implement
 `showModal`, so it could only be tested through the fallback path. Hand-rolling it
