@@ -582,6 +582,15 @@ function declarationsFor(selector: string): string {
   return (rule[2] ?? "").replace(/\s+/g, " ").trim();
 }
 
+/** The column the header sits in: the page's own box, on either view. */
+function pageColumn(): HTMLElement {
+  const column = document.querySelector("header")?.parentElement;
+  if (!(column instanceof HTMLElement)) {
+    throw new Error("the page column was not rendered");
+  }
+  return column;
+}
+
 describe("card layout", () => {
   // Regression guard. The faces used to be `position: absolute; inset: 0`
   // inside a `h-full` wrapper, which gave the wrapper no intrinsic height: it
@@ -612,6 +621,76 @@ describe("card layout", () => {
     expect(document.querySelectorAll(".flip-inner > .flip-face")).toHaveLength(
       2,
     );
+  });
+
+  it("bounds the study page to the viewport rather than growing with the card", () => {
+    render(<App />);
+
+    // Regression guard. The column was `min-h-dvh`, so it grew to whatever the
+    // card needed: the answer face asked for 70% of the screen and the header,
+    // progress bar, and controls took another ~240px on top of that, which is
+    // more than a phone has. Every card therefore scrolled the page, including
+    // the question view, because the hidden answer face still set the height.
+    // `h-dvh` caps the column at one screen and lets the card take the rest.
+    //
+    // Checked with `classList`, not a substring: "h-dvh" is a substring of
+    // "min-h-dvh", so a naive assertion would pass on the old code.
+    expect(pageColumn().classList.contains("h-dvh")).toBe(true);
+    expect(pageColumn().classList.contains("min-h-dvh")).toBe(false);
+    expect(declarationsFor(".h-dvh")).toContain("height: 100dvh");
+  });
+
+  it("lets the settings view outgrow the viewport, because it is longer than a phone", () => {
+    render(<App />);
+    fireEvent.click(settingsToggle());
+
+    // The opposite bound on purpose. The category list is taller than a phone
+    // screen, so bounding it here would clip the toggles off the bottom.
+    expect(pageColumn().classList.contains("min-h-dvh")).toBe(true);
+    expect(pageColumn().classList.contains("h-dvh")).toBe(false);
+  });
+
+  it("gives the card the space the rest of the page leaves over", () => {
+    render(<App />);
+
+    const scene = document.querySelector(".flip-scene");
+    expect(scene?.classList.contains("flex-1")).toBe(true);
+    // `min-h-0` is what allows a flex item to shrink below its content height.
+    // The default `min-height: auto` holds it at content size and pushes the
+    // overflow into a page scroll, which is the bug this arrangement avoids.
+    expect(scene?.classList.contains("min-h-0")).toBe(true);
+    // The shared cell needs a definite height, or `max-h-full` on a face has
+    // nothing to resolve against and the content spills past the card.
+    expect(declarationsFor(".flip-inner")).toContain("height: 100%");
+  });
+
+  it("keeps the header, progress bar, and controls from being squeezed", () => {
+    render(<App />);
+
+    const children = [...pageColumn().children];
+    // Header, progress bar, card, controls.
+    expect(children).toHaveLength(4);
+    const card = children.find((child) =>
+      child.classList.contains("flip-scene"),
+    );
+    expect(card).toBeDefined();
+
+    // Only the card may shrink. The others would otherwise compress as well,
+    // squeezing the controls instead of the card absorbing the shortfall.
+    for (const child of children) {
+      expect(child.classList.contains("shrink-0")).toBe(child !== card);
+    }
+  });
+
+  it("scrolls each face inside the card instead of growing the page", () => {
+    render(<App />);
+
+    // One scrollable region per face. The question face had none, so a long
+    // question would have overflowed the card and been clipped by the column
+    // rather than staying readable.
+    for (const face of document.querySelectorAll(".flip-face")) {
+      expect(face.querySelectorAll(".overflow-y-auto")).toHaveLength(1);
+    }
   });
 });
 

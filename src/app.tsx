@@ -174,8 +174,15 @@ export function App() {
   }, []);
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12">
-      <header className="flex items-center justify-between gap-4">
+    <div
+      className={`mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-12 ${
+        // The study view fits itself to the viewport so the card can claim the
+        // leftover space and shrink when it has to. The settings view is as long
+        // as it needs to be, so it keeps the page scrolling.
+        view === "study" ? "h-dvh" : "min-h-dvh"
+      }`}
+    >
+      <header className="flex shrink-0 items-center justify-between gap-4">
         <h1 className="text-ink text-2xl font-bold tracking-tight">
           Flashcards
         </h1>

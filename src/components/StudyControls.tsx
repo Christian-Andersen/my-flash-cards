@@ -19,7 +19,9 @@ export function StudyControls({
   onNext,
 }: StudyControlsProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    // `mt-auto` keeps the controls at the foot of the viewport when the card
+    // has taken all the room it wants and left some over.
+    <div className="mt-auto flex shrink-0 flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2">
         <button
           type="button"

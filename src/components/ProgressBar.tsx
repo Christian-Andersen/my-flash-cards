@@ -16,7 +16,7 @@ export function ProgressBar({ progress }: ProgressBarProps) {
   const pct = (n: number) => (total === 0 ? 0 : (n / total) * 100);
 
   return (
-    <div className="w-full">
+    <div className="w-full shrink-0">
       <div
         className="bg-surface-raised border-line flex h-2 w-full overflow-hidden rounded-full border"
         aria-hidden="true"

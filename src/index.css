@@ -72,6 +72,13 @@
 
   .flip-inner {
     display: grid;
+    /*
+     * Fills the card so the single grid cell has a definite height, which is
+     * what bounds each face. A long question or answer then scrolls inside its
+     * own face instead of stretching the cell, and so the page, past the
+     * viewport.
+     */
+    height: 100%;
     transform-style: preserve-3d;
     transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
   }

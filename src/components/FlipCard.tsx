@@ -98,11 +98,15 @@ export function FlipCard({
   const accent = ACCENT_STYLES[category?.accent ?? "sky"] ?? ACCENT_STYLES.sky;
 
   return (
-    <div className="flip-scene">
+    // Takes the space the header, progress bar, and controls leave over, and
+    // shrinks below its content when even that is not enough. The cap keeps the
+    // card from stretching into a tall narrow slab on a large display, where
+    // there is more room than a card this wide has any use for.
+    <div className="flip-scene flex max-h-[40rem] min-h-0 flex-1">
       <div className="flip-inner" data-flipped={flipped}>
         {/* Question */}
         <section
-          className={`flip-face border-line bg-surface flex flex-col gap-5 rounded-2xl border p-6 shadow-xl sm:p-8`}
+          className={`flip-face border-line bg-surface flex max-h-full min-h-0 flex-col gap-5 overflow-hidden rounded-2xl border p-6 shadow-xl sm:p-8`}
           aria-hidden={flipped}
           // `aria-hidden` alone only hides from assistive technology; the
           // buttons on the back face stay in the tab order and stay clickable
@@ -111,14 +115,16 @@ export function FlipCard({
           // keypress can never be aimed at a control the user cannot see.
           inert={flipped}
         >
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex shrink-0 items-center justify-between gap-3">
             <CategoryBadge category={category} />
             <span className="text-ink-faint font-mono text-xs tabular-nums">
               {position} / {total}
             </span>
           </div>
 
-          <div className="flex-1">
+          {/* Scrolls inside the card rather than growing the page, so a long
+              question still fits on a short screen. */}
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
             <h2 className="text-ink text-xl leading-snug font-semibold text-balance sm:text-2xl">
               <InlineText text={card.front} />
             </h2>
@@ -128,7 +134,7 @@ export function FlipCard({
             type="button"
             onClick={onFlip}
             tabIndex={flipped ? -1 : 0}
-            className="bg-accent text-canvas w-full rounded-lg px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
+            className="bg-accent text-canvas w-full shrink-0 rounded-lg px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
           >
             Show answer
             <kbd className="bg-canvas/20 ml-2 rounded px-1.5 py-0.5 font-mono text-[0.6875rem]">
@@ -139,11 +145,11 @@ export function FlipCard({
 
         {/* Answer */}
         <section
-          className="flip-back flip-face border-line bg-surface flex max-h-[70dvh] flex-col gap-5 overflow-hidden rounded-2xl border p-6 shadow-xl sm:p-8"
+          className="flip-back flip-face border-line bg-surface flex max-h-full min-h-0 flex-col gap-5 overflow-hidden rounded-2xl border p-6 shadow-xl sm:p-8"
           aria-hidden={!flipped}
           inert={!flipped}
         >
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex shrink-0 items-center justify-between gap-3">
             <CategoryBadge category={category} />
             <button
               type="button"
@@ -159,7 +165,7 @@ export function FlipCard({
             <AnswerBlocks blocks={card.back} />
           </div>
 
-          <div className="border-line border-t pt-4">
+          <div className="border-line shrink-0 border-t pt-4">
             <AnswerButtons onAnswer={onAnswer} />
           </div>
 
