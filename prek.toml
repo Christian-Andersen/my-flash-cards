@@ -1,0 +1,34 @@
+# Pre-commit hooks. Run `prek install` to activate them.
+#
+# Everything delegates to the Justfile rather than pulling tools from remote
+# mirror repos. Two reasons:
+#
+#   1. No drift. The formatter is the exact Prettier in package-lock.json, so
+#      the hook and `just check` can never disagree. The pre-commit mirror repo
+#      only tags up to v3.1.0, so pinning it would install a different version
+#      than the project uses and reformat files differently.
+#   2. No network fetch at commit time.
+#
+# `just check` covers formatting, linting, and typechecking in one gate and
+# regenerates the card module first, so the type-aware lint rules always see
+# current data. This file is TOML; prek only reads YAML from
+# .pre-commit-config.yaml.
+
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "just-check",
+    name = "just check (format, lint, typecheck)",
+    entry = "just check",
+    language = "system",
+    pass_filenames = false,
+    files = '\.(ts|tsx|json|css|html|md)$',
+  },
+  { id = "just-test",
+    name = "just test",
+    entry = "just test",
+    language = "system",
+    pass_filenames = false,
+    files = '\.(ts|tsx)$',
+  },
+]

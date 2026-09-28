@@ -1,0 +1,1204 @@
+{
+  "categories": [
+    {
+      "id": "javascript",
+      "label": "JavaScript",
+      "accent": "amber"
+    },
+    {
+      "id": "typescript",
+      "label": "TypeScript",
+      "accent": "sky"
+    },
+    {
+      "id": "css",
+      "label": "CSS",
+      "accent": "violet"
+    },
+    {
+      "id": "nix",
+      "label": "Nix",
+      "accent": "teal"
+    },
+    {
+      "id": "tooling",
+      "label": "Tooling",
+      "accent": "emerald"
+    },
+    {
+      "id": "accessibility",
+      "label": "A11y",
+      "accent": "rose"
+    },
+    {
+      "id": "algorithms",
+      "label": "Algorithms",
+      "accent": "sky"
+    },
+    {
+      "id": "data-structures",
+      "label": "Data Structures",
+      "accent": "teal"
+    },
+    {
+      "id": "web",
+      "label": "Web & HTTP",
+      "accent": "amber"
+    },
+    {
+      "id": "databases",
+      "label": "Databases",
+      "accent": "violet"
+    },
+    {
+      "id": "testing",
+      "label": "Testing",
+      "accent": "emerald"
+    },
+    {
+      "id": "git",
+      "label": "Git",
+      "accent": "rose"
+    },
+    {
+      "id": "systems",
+      "label": "Systems",
+      "accent": "sky"
+    }
+  ],
+  "cards": [
+    {
+      "id": "js-closure",
+      "category": "javascript",
+      "front": "What does a closure capture, and why does this log 3 three times?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A closure captures bindings, not values. The callbacks below all close over the same `i` binding in the same scope, and by the time any of them runs, the loop has finished incrementing it. `var` is function-scoped, so all three functions see the same variable rather than one per iteration."
+        },
+        {
+          "type": "code",
+          "language": "javascript",
+          "caption": "var shares one binding across every iteration",
+          "code": "for (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i));\n}\n// logs 3, 3, 3"
+        },
+        {
+          "type": "text",
+          "content": "Swapping `var` for `let` gives each iteration its own binding, so the callbacks capture three distinct values."
+        },
+        {
+          "type": "code",
+          "language": "javascript",
+          "caption": "let creates a binding per iteration",
+          "code": "for (let i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i));\n}\n// logs 0, 1, 2"
+        }
+      ]
+    },
+    {
+      "id": "js-microtask-order",
+      "category": "javascript",
+      "front": "In what order do these run? Promise callbacks vs. setTimeout vs. queueMicrotask.",
+      "back": [
+        {
+          "type": "text",
+          "content": "Synchronous code first, then the microtask queue drained completely, then one macrotask. `queueMicrotask` and promise callbacks are both microtasks, so they run before the `setTimeout` even with a delay of 0. The delay is clamped to roughly 4ms after nesting anyway."
+        },
+        {
+          "type": "code",
+          "language": "javascript",
+          "caption": "order is 1, 2, 3, 4, 5",
+          "code": "console.log('1 sync');\n\nsetTimeout(() => console.log('5 macrotask'), 0);\n\nqueueMicrotask(() => console.log('3 microtask'));\nPromise.resolve().then(() => console.log('4 promise'));\n\nconsole.log('2 sync');\n\n// 1 sync\n// 2 sync\n// 3 microtask\n// 4 promise\n// 5 macrotask"
+        }
+      ]
+    },
+    {
+      "id": "ts-satisfies",
+      "category": "typescript",
+      "front": "What does `satisfies` do that an annotation does not?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A type annotation widens the literal and discards the shape, so you lose autocompletion on extra keys. `satisfies` checks the value against the type but keeps the inferred narrower type, so the object keeps its exact keys and literal types while still being validated."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "annotation widens and drops the key",
+          "code": "type Config = { retries: number };\n\nconst a: Config = { retries: 3, timeout: 500 };\n// hover: Config\n// a.timeout -> error, not a property"
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "satisfies validates but keeps the precise type",
+          "code": "type Config = { retries: number };\n\nconst b = { retries: 3, timeout: 500 } satisfies Config;\n// hover: { retries: number; timeout: number }\n// b.timeout -> number, autocompleted\n\nconst bad = { retries: '3' } satisfies Config;\n// error: '3' is not assignable to number"
+        }
+      ]
+    },
+    {
+      "id": "ts-narrowing",
+      "category": "typescript",
+      "front": "How does TypeScript narrow a discriminated union, and what does `never` catch?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A shared literal property becomes the discriminant, and a `switch` on it narrows the union per branch. Handling every case makes the fallthrough variable `never`, which turns a missing case into a compile error rather than a runtime surprise."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "exhaustive switch on the discriminant",
+          "code": "type Result<T> =\n  | { kind: 'ok'; value: T }\n  | { kind: 'err'; error: Error };\n\nfunction render<T>(r: Result<T>): string {\n  switch (r.kind) {\n    case 'ok':\n      return String(r.value);\n    case 'err':\n      return r.error.message;\n    default: {\n      const unreachable: never = r;\n      // Adding a third kind makes this line fail to compile,\n      // pointing at the switch that needs updating.\n      return JSON.stringify(unreachable);\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "id": "css-specificity",
+      "category": "css",
+      "front": "Why does this inline `color` win over the class rule, and what is the escape hatch?",
+      "back": [
+        {
+          "type": "text",
+          "content": "The inline style sits in the style attribute, which beats any selector regardless of specificity. The way out is usually to remove the inline style rather than escalate specificity. When a specific override is genuinely needed, the cascade layer order is clearer than stacking `!important` or nested selectors."
+        },
+        {
+          "type": "code",
+          "language": "html",
+          "caption": "inline style wins over .brand",
+          "code": "<span class=\"brand\" style=\"color: red\">Red</span>\n\n/* .brand { color: blue } loses to the attribute above */"
+        },
+        {
+          "type": "code",
+          "language": "css",
+          "caption": "cascade layers beat specificity entirely",
+          "code": "@layer reset, components, utilities;\n\n@layer utilities {\n  .text-brand {\n    color: red; /* wins over any unlayered .brand rule */\n  }\n}\n\n@layer components {\n  .brand {\n    color: blue;\n  }\n}"
+        }
+      ]
+    },
+    {
+      "id": "css-grid-fit-content",
+      "category": "css",
+      "front": "Difference between `fit-content`, `min-content`, and `max-content`?",
+      "back": [
+        {
+          "type": "text",
+          "content": "`min-content` is the narrowest the box can be without overflowing, which for text is the longest word. `max-content` is the width with no wrapping at all. `fit-content` is `min(max-content, available)` clamped to at least `min-content`, which is the shrink-to-fit behaviour most layout code actually wants."
+        },
+        {
+          "type": "code",
+          "language": "css",
+          "caption": "fit-content behaves like a width: auto block in a grid cell",
+          "code": ".panel {\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));\n}\n\n.tooltip {\n  width: fit-content;\n  max-width: min(20rem, 90vw);\n}"
+        }
+      ]
+    },
+    {
+      "id": "nix-devshell",
+      "category": "nix",
+      "front": "What is a `devShell` for, and how does direnv get you into one?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A devShell is a derivation that builds an environment rather than a package: it exists only to be entered with `nix develop`. direnv's `use flake` runs that automatically on `cd`, so the toolchain is loaded and forgotten. This is the difference between `npm install -g` and having the version pinned in the flake."
+        },
+        {
+          "type": "code",
+          "language": "nix",
+          "caption": "minimal devShell",
+          "code": "{\n  description = \"my-flash-cards dev environment\";\n\n  inputs = {\n    nixpkgs.url = \"github:NixOS/nixpkgs/nixos-unstable\";\n    flake-utils.url = \"github:numtide/flake-utils\";\n  };\n\n  outputs = { self, nixpkgs, flake-utils }:\n    flake-utils.lib.eachDefaultSystem (system:\n      let pkgs = nixpkgs.legacyPackages.${system};\n      in {\n        devShells.default = pkgs.mkShell {\n          packages = with pkgs; [ nodejs_22 just prek ];\n        };\n      });\n}"
+        }
+      ]
+    },
+    {
+      "id": "nix-store-vs-closure",
+      "category": "nix",
+      "front": "What is the difference between the store path and the closure?",
+      "back": [
+        {
+          "type": "text",
+          "content": "The store path is the single hash-addressed directory for one derivation. The closure is that path plus every input reachable from it, transitively. Hashing the closure is what makes the result reproducible: the same inputs always produce the same output bytes, regardless of when or where it was built."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "caption": "compare one path with its transitive inputs",
+          "code": "# what this build depends on, transitively\nnix-store -qR ./result\n\n# only the direct references\nnix-store -q --references ./result\n\n# why the path is this hash\nnix-store -q --derivation ./result"
+        }
+      ]
+    },
+    {
+      "id": "tooling-prek-vs-hooks",
+      "category": "tooling",
+      "front": "What problem do prek and pre-commit solve, and why keep the config declarative?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Both run formatters, linters, and fast tests before a commit so failures land in the working tree rather than in CI. The config stays declarative, listing hook repos and revisions, so every machine and CI runner applies the identical set. `prek` is a faster Rust reimplementation with a compatible config."
+        },
+        {
+          "type": "code",
+          "language": "toml",
+          "caption": "hooks shared by local and CI runs",
+          "code": "repos:\n  - repo: https://github.com/pre-commit/mirrors-prettier\n    rev: v3.9.9\n    hooks:\n      - id: prettier\n\n  - repo: local\n    hooks:\n      - id: check\n        name: just check\n        entry: just check\n        language: system\n        pass_filenames: false\n        always_run: true"
+        }
+      ]
+    },
+    {
+      "id": "a11y-focus-visible",
+      "category": "accessibility",
+      "front": "Why not remove the focus outline, and what replaces it?",
+      "back": [
+        {
+          "type": "text",
+          "content": "The focus ring is how a keyboard user knows where they are. Removing it outright strands them. `:focus-visible` draws the indicator only when the browser judges it useful, which is the keyboard case, and keeps it off mouse clicks. A custom ring still needs enough contrast against the background, roughly 3:1."
+        },
+        {
+          "type": "code",
+          "language": "css",
+          "caption": "keep the ring, scope it to keyboard use",
+          "code": ":focus {\n  outline: none; /* only ever pair with the rule below */\n}\n\n:focus-visible {\n  outline: 2px solid var(--color-accent);\n  outline-offset: 2px;\n  border-radius: 0.25rem;\n}\n\n/* Forced-colors mode users need the system ring back. */\n@media (forced-colors: active) {\n  :focus-visible {\n    outline: 2px solid Highlight;\n  }\n}"
+        }
+      ]
+    },
+    {
+      "id": "a11y-live-region",
+      "category": "accessibility",
+      "front": "When should a live region be used, and what is the common mistake?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A live region announces content that changes without a navigation, such as a filter result count or a validation message. The mistake is adding the attribute to an element at the same moment as its text: many screen readers only watch for changes after the region exists, so the first update is missed. Put the region in the DOM at load and mutate only its contents."
+        },
+        {
+          "type": "code",
+          "language": "html",
+          "caption": "polite waits for a pause, assertive interrupts",
+          "code": "<!-- Region is present from the start, empty at load. -->\n<p role=\"status\" aria-live=\"polite\">\n  <span id=\"result-count\"></span>\n</p>\n\n<script>\n  // Later, only the text node changes.\n  document.getElementById('result-count').textContent =\n    `${n} of ${total} cards`;\n</script>"
+        }
+      ]
+    },
+    {
+      "id": "js-array-dedupe",
+      "category": "javascript",
+      "front": "How do you dedupe an array, and what is the gotcha with `NaN`?",
+      "back": [
+        {
+          "type": "text",
+          "content": "`Set` is the direct answer. It uses SameValueZero, so it treats `NaN` as equal to `NaN` and treats `+0` and `-0` as the same key, which is usually what you want. SameValueZero is why `new Set([NaN, NaN]).size` is 1, whereas `NaN === NaN` is false and a naive `indexOf` dedupe would keep both."
+        },
+        {
+          "type": "code",
+          "language": "javascript",
+          "caption": "Set handles NaN and mixed zero signs",
+          "code": "const uniq = (xs) => [...new Set(xs)];\n\nuniq([1, 2, 2, NaN, NaN, 0, -0]);\n// [1, 2, NaN, 0]  -> length 4\n\n// a naive filter keeps both NaNs:\n[NaN, NaN].filter((x, i, a) => a.indexOf(x) === i);\n// [NaN, NaN] -> length 2"
+        }
+      ]
+    },
+    {
+      "id": "alg-big-o-log-n",
+      "category": "algorithms",
+      "front": "Why is binary search O(log n), and what is its real precondition?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Each comparison eliminates half the remaining candidates, so the input size is halved per step. Solving `n / 2^k = 1` gives `k = log2(n)` steps."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "Halving, not scanning",
+          "code": "def contains(haystack, needle):\n    lo, hi = 0, len(haystack) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if haystack[mid] == needle:\n            return True\n        if haystack[mid] < needle:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return False"
+        },
+        {
+          "type": "text",
+          "content": "The precondition is the part people skip: the data must be **sorted**. The algorithm does not return a wrong answer on unsorted input, it returns an arbitrary one, because the half to discard is chosen by assuming an ordering that does not hold."
+        }
+      ]
+    },
+    {
+      "id": "alg-sort-comparison",
+      "category": "algorithms",
+      "front": "How do merge sort and quicksort differ, and when does quicksort go quadratic?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Both are O(n log n) on average. Merge sort guarantees it: it always splits in half, at the cost of O(n) extra space for the merge buffer. Quicksort partitions around a pivot in place, so it is O(1) extra space, but its split depends on the pivot."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "Quicksort's worst case is an already-sorted list with a naive pivot",
+          "code": "# pivot = last element; input is already sorted\n# every partition puts the pivot at one extreme,\n# so depth becomes n and the cost is n + (n-1) + ... = O(n^2)\n# picking a random or median-of-three pivot removes this in practice"
+        },
+        {
+          "type": "text",
+          "content": "A median-of-three or random pivot makes the pathological input a measure-zero event, and introsort (used by most standard-library sorts) falls back to heapsort past a recursion depth limit so the worst case stays O(n log n)."
+        }
+      ]
+    },
+    {
+      "id": "alg-hash-lookup",
+      "category": "algorithms",
+      "front": "Why is a hash map lookup O(1), and what breaks that?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A hash function maps a key to a bucket index, so the lookup jumps straight to one bucket instead of comparing against every entry. The cost is O(1) *per operation*, amortised over the collisions encountered, and it is O(1) only because the table grows as load factor rises."
+        },
+        {
+          "type": "text",
+          "content": "It degrades when keys collide. If a hash function returns the same value for many keys, they pile into one bucket and the lookup degenerates into a linear scan, giving O(n). Adversarial keys can also engineer this deliberately, which is why languages randomise the seed for string hashing."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "A dict is a hash table; iteration order is insertion order, not sorted order",
+          "code": "d = {\"b\": 1, \"a\": 2}\nlist(d)          # ['b', 'a']  insertion order\nsorted(d)       # ['a', 'b']\n# membership is by key lookup, not a scan\n\"a\" in d        # True  -> O(1)"
+        }
+      ]
+    },
+    {
+      "id": "alg-two-pointers",
+      "category": "algorithms",
+      "front": "What is the two-pointer technique, and when is it faster than a nested loop?",
+      "back": [
+        {
+          "type": "text",
+          "content": "With sorted input you can rule out a whole row or column of pairs with a single comparison, because the ordering tells you which direction to move. That turns O(n^2) into O(n)."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "Pair sum on a sorted list: O(n) instead of O(n^2)",
+          "code": "def pair_sum(values, target):\n    lo, hi = 0, len(values) - 1\n    while lo < hi:\n        total = values[lo] + values[hi]\n        if total == target:\n            return (lo, hi)\n        if total < target:\n            lo += 1   # too small: the largest remaining partner still is\n        else:\n            hi -= 1   # too big: the smallest remaining partner still is\n    return None"
+        },
+        {
+          "type": "text",
+          "content": "The two comment lines are the whole trick. Because the array is sorted, an out-of-range total tells you which pointer is wrong, so you can discard that entire side of the search space at once."
+        }
+      ]
+    },
+    {
+      "id": "alg-dfs-vs-bfs",
+      "category": "algorithms",
+      "front": "How do DFS and BFS differ, and which one finds a shortest path?",
+      "back": [
+        {
+          "type": "text",
+          "content": "BFS explores by distance, popping a FIFO queue, so the first time it reaches a node it has arrived by a minimum-edge path. DFS explores one branch as far as it goes, popping a LIFO stack, and has no such guarantee."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "BFS gives shortest path in an unweighted graph",
+          "code": "from collections import deque\n\ndef shortest_path(graph, start, goal):\n    queue = deque([(start, [start])])\n    seen = {start}\n    while queue:\n        node, path = queue.popleft()\n        if node == goal:\n            return path\n        for nxt in graph.get(node, ()):\n            if nxt not in seen:      # mark on enqueue, not on dequeue\n                seen.add(nxt)\n                queue.append((nxt, path + [nxt]))\n    return None"
+        },
+        {
+          "type": "text",
+          "content": "BFS only gives shortest paths when every edge costs the same. With weighted edges you need Dijkstra, and with negative weights a queue is simply wrong. DFS gives shortest paths in *directed acyclic* graphs when you memoise."
+        }
+      ]
+    },
+    {
+      "id": "alg-dynamic-programming",
+      "category": "algorithms",
+      "front": "What are the two properties that make a problem a dynamic programming problem?",
+      "back": [
+        {
+          "type": "text",
+          "content": "**Overlapping subproblems**: the naive recursion recomputes the same inputs over and over. **Optimal substructure**: the answer is built out of the answers to smaller versions of the same problem. Both are needed. If subproblems do not overlap, the naive version is already optimal and memoising it is just overhead."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "Naive fibonacci is exponential; memoised is linear",
+          "code": "def fib(n):                     # O(phi**n) calls, recomputes everything\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n\ndef fib_memo(n, memo={}):           # O(n): each value computed once\n    if n < 2:\n        return n\n    if n not in memo:\n        memo[n] = fib_memo(n - 1) + fib_memo(n - 2)\n    return memo[n]"
+        },
+        {
+          "type": "text",
+          "content": "Note the recursion tree of the naive version is a Fibonacci structure itself, so the call count grows exponentially even though the answer only needs n values. Recognising that a naive recursion keeps recomputing the same subproblem is usually the signal to memoise."
+        }
+      ]
+    },
+    {
+      "id": "alg-memo-vs-tabulate",
+      "category": "algorithms",
+      "front": "What is the difference between memoisation and tabulation, and how do they differ in space?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Memoisation is top-down: you write the recursive solution and add a cache, so states are only ever created if they are actually reachable. Tabulation is bottom-up: you fill a table in dependency order, computing every state whether or not it was needed."
+        },
+        {
+          "type": "text",
+          "content": "The usual trade is that tabulation uses O(n) space unconditionally, while memoisation may use less, and can also use more than an iterative table when the state includes a call stack. The performance difference is stack depth, not time: a naive `fib_memo(1000)` blows the Python stack, `fib_iter(1000)` does not."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "Bottom-up avoids the recursion limit entirely",
+          "code": "def fib_iter(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a   # O(n) time, O(1) space: only the last two values matter"
+        }
+      ]
+    },
+    {
+      "id": "alg-amortized",
+      "category": "algorithms",
+      "front": "What does it mean for `list.append` to be amortised O(1), and why is that not the same as O(1)?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Some appends are O(n) because the backing array has to be copied into a bigger one. Amortised analysis averages the cost over a whole sequence of operations, so occasional expensive steps divide out to a small constant."
+        },
+        {
+          "type": "text",
+          "content": "Growing by a constant factor (usually 2x) keeps the total copying cost linear: the geometric sum 1 + 2 + 4 + ... + n is O(n), so copying never dominates. Growing by a fixed amount like +10 would instead make the total O(n^2)."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "A single append can be arbitrarily slow even though the average is constant",
+          "code": "xs = []\nfor i in range(1_000_000):\n    xs.append(i)   # one call copies ~1M pointers; the rest are free"
+        }
+      ]
+    },
+    {
+      "id": "alg-big-o-pitfalls",
+      "category": "algorithms",
+      "front": "Why is Big O notation a poor way to compare two implementations of the same thing?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Big O discards constants and lower-order terms, so it throws away exactly the things that decide a real contest between two programs. A bubble sort and a quicksort are both \"O(n^2)\" if you write the sort naively, but one is `n^2 / 2` comparisons and the other is `n log n` and they are not remotely comparable."
+        },
+        {
+          "type": "text",
+          "content": "It also says nothing about the constants that dominate at small `n`, which is most real inputs. Cache locality, allocation count, and branch prediction routinely beat an asymptotic win by an order of magnitude. The usual fixes are to state the constants, and to measure rather than reason about it."
+        },
+        {
+          "type": "text",
+          "content": "It is a useful tool for *rejecting* algorithms and a poor tool for *choosing* between two good ones."
+        }
+      ]
+    },
+    {
+      "id": "ds-stack-vs-queue",
+      "category": "data-structures",
+      "front": "What is the difference between a stack and a queue, and what are each used for?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A stack is last-in-first-out; a queue is first-in-first-out. That single difference decides where each is useful: a stack gives you most-recent-first and nesting, a queue gives you oldest-first and fairness."
+        },
+        {
+          "type": "text",
+          "content": "Stacks back call frames, expression parsing, undo history, and depth-first search. Queues back breadth-first search, buffering, request handling, and fair scheduling. A priority queue is a third thing: order is decided by a comparison, not by insertion time."
+        },
+        {
+          "type": "code",
+          "language": "javascript",
+          "caption": "Two structures that look similar and invert each other",
+          "code": "const stack = [];\nstack.push(1); stack.push(2);\nstack.pop();              // 2   -- newest first\n\nconst queue = [];\nqueue.push(1); queue.push(2);\nqueue.shift();            // 1   -- oldest first"
+        },
+        {
+          "type": "text",
+          "content": "Be careful with `shift` on a JavaScript array: it reindexes every element, so it is O(n) and turns a queue into a performance trap. JavaScript's real queue is `Array.prototype` plus an index, or the `Queue` from a collection library."
+        }
+      ]
+    },
+    {
+      "id": "ds-array-vs-linked-list",
+      "category": "data-structures",
+      "front": "When is a linked list actually better than an array?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Almost never in high-level languages, and the reason is cache locality. An array stores elements in contiguous memory, so reading a run of them touches a few cache lines. A linked list scatters nodes across the heap, so every traversal step is a likely cache miss, which costs far more than the arithmetic the asymptotics omit."
+        },
+        {
+          "type": "text",
+          "content": "Linked lists do have genuine wins: O(1) insertion and deletion *given a pointer to the node*, and no reallocation or copying when growing. That is exactly what a doubly linked list plus a hash map gives you in an LRU cache, and almost nothing else."
+        },
+        {
+          "type": "text",
+          "content": "Measured in practice, linked lists are slower than arrays for nearly every workload. The textbook table of Big O numbers hides the constant factors that decide the actual result."
+        }
+      ]
+    },
+    {
+      "id": "ds-bst-invariant",
+      "category": "data-structures",
+      "front": "What invariant does a binary search tree maintain, and how does a bad one fall apart?",
+      "back": [
+        {
+          "type": "text",
+          "content": "For every node, all keys in the left subtree are smaller and all keys in the right subtree are larger. That local rule is what makes search, in-order traversal, and range queries work."
+        },
+        {
+          "type": "text",
+          "content": "The invariant is local, but performance depends on the *shape*. Search is O(height), and height is only O(log n) when the tree stays balanced. Inserting sorted keys into an unbalanced tree produces a linked list: height becomes n and every operation degrades to O(n)."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "A self-balancing tree guarantees O(log n) regardless of insertion order",
+          "code": "import bisect\n\n# Python's sortedcontainers / the standard library expose\n# balanced trees, not raw BSTs, so the shape is handled for you\nxs = [1, 5, 3, 9, 7]\nxs.sort()\nbisect.insort(xs, 4)      # O(log n) find, O(n) shift -- array tradeoff\ni = bisect.bisect_left(xs, 7)   # O(log n) lookup on sorted data"
+        }
+      ]
+    },
+    {
+      "id": "ds-lru-cache",
+      "category": "data-structures",
+      "front": "How do you implement an LRU cache in constant time per operation?",
+      "back": [
+        {
+          "type": "text",
+          "content": "You need two structures working together: a hash map for O(1) lookup by key, and a doubly linked list for O(1) reordering. The linked list is unnecessary on its own -- walking it to find the least recently used entry is O(n)."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "Map for identity, list for recency order",
+          "code": "from collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity):\n        self.capacity = capacity\n        self.cache = OrderedDict()   # dict + doubly linked list\n\n    def get(self, key):\n        if key not in self.cache:\n            return -1\n        self.cache.move_to_end(key)   # most recently used\n        return self.cache[key]\n\n    def put(self, key, value):\n        if key in self.cache:\n            self.cache.move_to_end(key)\n        self.cache[key] = value\n        if len(self.cache) > self.capacity:\n            self.cache.popitem(last=False)   # evict least recently used"
+        }
+      ]
+    },
+    {
+      "id": "ds-set-vs-map",
+      "category": "data-structures",
+      "front": "What is the difference between a set and a map, and what is a set used for?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A set stores unique values with no associated data; a map stores key-value pairs. A set is conceptually a map whose values are all the same placeholder, and in most languages it is implemented exactly that way."
+        },
+        {
+          "type": "text",
+          "content": "Sets earn their place for membership testing, deduplication, and set algebra (intersection, difference, union). Membership is a hash lookup, so it is O(1) -- scanning a list or using `in` on an array is O(n)."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "Deduplication that also keeps first-seen order",
+          "code": "seen = set()\nunique = [x for x in items if not (x in seen or seen.add(x))]\n\n# the plain form, when order does not matter\nunique = set(items)"
+        }
+      ]
+    },
+    {
+      "id": "ds-heap-priority-queue",
+      "category": "data-structures",
+      "front": "What is a binary heap good for, and why is it not a sorted structure?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A binary heap is a complete binary tree ordered so a parent is never worse than its children. That gives O(1) peek at the best item, O(log n) push, and O(log n) pop -- the shape a priority queue wants."
+        },
+        {
+          "type": "text",
+          "content": "It is deliberately **not** sorted: there is no order between the two subtrees, and there is no way to get the second-smallest element. The moment you need ordered access, iteration, or range queries, a heap is the wrong structure and a balanced tree or a sorted array is right."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "heapq is a min-heap; negating gives a max-heap",
+          "code": "import heapq\n\njobs = [5, 1, 9]\nheapq.heapify(jobs)          # O(n) build, not n pushes\nheapq.heappop(jobs)         # 1  O(log n)\nheapq.heappush(jobs, 3)     # O(log n)"
+        }
+      ]
+    },
+    {
+      "id": "web-idempotent-methods",
+      "category": "web",
+      "front": "Which HTTP methods are safe, and which are idempotent?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Safe means read-only: `GET`, `HEAD`, `OPTIONS`. Idempotent means repeating the request has the same effect as making it once: safe methods plus `PUT` and `DELETE`. `POST` is neither."
+        },
+        {
+          "type": "text",
+          "content": "`DELETE /users/7` is idempotent even though it returns 404 the second time -- the second call has no additional effect, which is what idempotency means. `POST /payments` is not, because a retry can charge the card twice."
+        },
+        {
+          "type": "text",
+          "content": "This distinction is what makes automatic retry safe. Clients and proxies may retry idempotent requests after a timeout; they may not retry `POST`. Making a `POST` safe to retry is the job of an idempotency key, not of HTTP."
+        }
+      ]
+    },
+    {
+      "id": "web-redirect-status",
+      "category": "web",
+      "front": "What is the difference between 301, 302, 307, and 308?",
+      "back": [
+        {
+          "type": "text",
+          "content": "301 Moved Permanently and 308 Permanent Redirect let the client rewrite the URL permanently. 302 Found and 307 Temporary Redirect do not. The 3xx pair that people usually care about is which one *preserves the method*."
+        },
+        {
+          "type": "text",
+          "content": "301 and 302 historically allowed method rewriting: a `POST` became a `GET` on arrival. 307 and 308 were introduced specifically to forbid that, keeping method and body intact. Modern clients mostly preserve the method for 301/302 too, so relying on either behaviour is a portability trap."
+        },
+        {
+          "type": "text",
+          "content": "The other one worth knowing is 304 Not Modified, which is a cache revalidation response to a conditional request and carries no body."
+        }
+      ]
+    },
+    {
+      "id": "web-401-vs-403",
+      "category": "web",
+      "front": "What is the difference between 401 and 403?",
+      "back": [
+        {
+          "type": "text",
+          "content": "401 Unauthorized means authentication is missing or invalid, and the response should include a `WWW-Authenticate` header. It means *who are you* is unresolved. 403 Forbidden means the identity is known but not permitted. It means *we know who you are, and the answer is still no*."
+        },
+        {
+          "type": "text",
+          "content": "The name is misleading: 401 is really \"unauthenticated\". The practical consequence is that a 401 is a hint to get credentials and retry, while retrying a 403 unchanged will never succeed."
+        }
+      ]
+    },
+    {
+      "id": "web-cors-preflight",
+      "category": "web",
+      "front": "What is the CORS preflight, and which requests trigger one?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A preflight is an `OPTIONS` request the browser sends before a non-simple cross-origin request, to ask the server whether the real request is allowed. The server answers with `Access-Control-Allow-Origin` and friends, and only then does the browser send the actual request."
+        },
+        {
+          "type": "text",
+          "content": "It is triggered by anything that is not a simple request: a non-simple method like `PUT` or `DELETE`, a `Content-Type` other than the three form types, or a non-simple header such as `Authorization`. Simple `GET`/`POST` with form content types skip it."
+        },
+        {
+          "type": "code",
+          "language": "http",
+          "caption": "A preflight exchange",
+          "code": "OPTIONS /api/cards HTTP/1.1\nOrigin: https://app.example.com\nAccess-Control-Request-Method: DELETE\nAccess-Control-Request-Headers: authorization\n\nHTTP/1.1 204 No Content\nAccess-Control-Allow-Origin: https://app.example.com\nAccess-Control-Allow-Methods: GET, POST, DELETE\nAccess-Control-Allow-Headers: authorization\nAccess-Control-Max-Age: 600"
+        },
+        {
+          "type": "text",
+          "content": "`Access-Control-Max-Age` is how you stop paying for a preflight on every request. A preflight is not a CORS failure -- it is CORS working."
+        }
+      ]
+    },
+    {
+      "id": "web-cache-control",
+      "category": "web",
+      "front": "How do `Cache-Control: max-age` and `immutable` change browser caching?",
+      "back": [
+        {
+          "type": "text",
+          "content": "`max-age` tells the client how long a response is fresh without revalidating. On its own it says nothing about reloads: a user-initiated reload still revalidates. `immutable` is the part that stops that -- it tells the browser not to revalidate even on reload for the whole freshness lifetime."
+        },
+        {
+          "type": "text",
+          "content": "`immutable` is only safe on URLs that change when the bytes change, which in practice means content-hashed filenames. Putting it on `/index.html` is a classic self-inflicted bug: users get pinned to an old app shell and never receive the deploy."
+        },
+        {
+          "type": "code",
+          "language": "http",
+          "caption": "The split this repo ships",
+          "code": "# content-hashed assets: cache forever, never revalidate\n/assets/index-9f2a1c.js  Cache-Control: public, max-age=31536000, immutable\n\n# the entry document: always revalidate so a deploy is picked up\n/                    Cache-Control: no-cache"
+        }
+      ]
+    },
+    {
+      "id": "web-idempotency-key",
+      "category": "web",
+      "front": "How do you make a retried `POST` safe to retry?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Send a client-generated idempotency key with the request. The server stores the key alongside the result and, on a repeat, returns the stored response instead of doing the work again. The key has to be scoped to the endpoint and to the caller."
+        },
+        {
+          "type": "text",
+          "content": "The subtlety is that the key must be recorded *atomically with* the side effect, in the same transaction. If you write the payment, then crash, then record the key, a retry duplicates the payment. If you record the key first and then crash, a retry returns a response for work that never happened."
+        }
+      ]
+    },
+    {
+      "id": "web-encoding-headers",
+      "category": "web",
+      "front": "What is the difference between `Accept-Encoding`, `Content-Encoding`, and `Transfer-Encoding`?",
+      "back": [
+        {
+          "type": "text",
+          "content": "`Accept-Encoding` is a request header listing compression formats the client can decode. `Content-Encoding` is a response header naming the compression actually applied to the body. `Transfer-Encoding` is about how the body is framed on the wire for transfer, not what it is -- and it is not a compression mechanism."
+        },
+        {
+          "type": "text",
+          "content": "They compose: a gzip-encoded body delivered with `chunked` transfer encoding has both `Content-Encoding: gzip` and `Transfer-Encoding: chunked`, and they mean completely different things. Compressing at the content layer is a cache-friendly default; choosing chunked framing at the transfer layer usually just means nobody thought about it."
+        }
+      ]
+    },
+    {
+      "id": "web-same-origin-policy",
+      "category": "web",
+      "front": "What does the same-origin policy actually restrict?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It restricts *reading* cross-origin responses, not sending requests. A page can fire a `fetch` to any origin; the browser sends it, the server may act on it, and then the browser withholds the response from the page's JavaScript. That is the origin of CSRF: the request works, the attacker just cannot see the reply."
+        },
+        {
+          "type": "text",
+          "content": "\"Origin\" is scheme, host, and port. Changing any one of the three makes a different origin, so `https://example.com` and `http://example.com` are unrelated, and so are `:8080` and `:3000`."
+        },
+        {
+          "type": "text",
+          "content": "CORS is the server opting in to letting the page read those responses. CSRF is the other half: a same-origin attack the SOP does nothing about, defended with tokens or `SameSite` cookies."
+        }
+      ]
+    },
+    {
+      "id": "db-acid",
+      "category": "databases",
+      "front": "What do the four letters of ACID actually promise?",
+      "back": [
+        {
+          "type": "text",
+          "content": "**Atomicity**: the transaction is all or nothing. It either commits in full or rolls back in full, so a crash mid-way cannot leave half the work done."
+        },
+        {
+          "type": "text",
+          "content": "**Consistency**: the transaction moves the database from one valid state to another valid one, honouring every constraint. It is the constraint system, not a promise the database makes independently."
+        },
+        {
+          "type": "text",
+          "content": "**Isolation**: concurrent transactions do not see each other's partial work. The level determines how strictly that holds, and no level gives full serialisability for free."
+        },
+        {
+          "type": "text",
+          "content": "**Durability**: once committed, the change survives a crash. In practice this means it is on disk and flushed, which is why `fsync` is the slowest thing a database does."
+        }
+      ]
+    },
+    {
+      "id": "db-isolation-levels",
+      "category": "databases",
+      "front": "What anomalies do the SQL isolation levels allow?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Three anomalies are the reason the levels exist. **Dirty read**: reading uncommitted data that is later rolled back. **Non-repeatable read**: re-reading a row in the same transaction returns a different value. **Phantom read**: a query re-run matches a different set of rows, because another transaction inserted matching ones."
+        },
+        {
+          "type": "text",
+          "content": "Read uncommitted permits dirty reads. Read committed stops them but still allows non-repeatable reads. Repeatable read stops those, and in PostgreSQL also stops phantoms, because it takes a snapshot for the whole transaction. Serializable stops all of them and is implemented with predicate locks or serialisable conflict detection, so it can abort a transaction that would have been unsafe."
+        },
+        {
+          "type": "text",
+          "content": "The practical note: the level is a promise about *isolation*, not about deadlocks or latency. Serializable costs retries, because the database detects the conflict and forces one transaction to roll back."
+        }
+      ]
+    },
+    {
+      "id": "db-joins-null-trap",
+      "category": "databases",
+      "front": "What is the trap with a `LEFT JOIN` and a filter in the `WHERE` clause?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A `LEFT JOIN` keeps unmatched left rows by manufacturing `NULL` for the right side. A `WHERE` comparison against `NULL` is never true -- it is `UNKNOWN` -- so the filter discards exactly the rows the outer join existed to preserve. The query silently degrades to an inner join."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "caption": "The WHERE version drops the rows with no orders; the ON version keeps them",
+          "code": "-- silently an INNER JOIN: users with no orders vanish\nSELECT u.name, o.total\nFROM users u\nLEFT JOIN orders o ON o.user_id = u.id\nWHERE o.total > 100;\n\n-- correct: the filter belongs in the ON clause\nSELECT u.name, o.total\nFROM users u\nLEFT JOIN orders o ON o.user_id = u.id AND o.total > 100;"
+        }
+      ]
+    },
+    {
+      "id": "db-index-tradeoff",
+      "category": "databases",
+      "front": "What does an index cost you, and what is a covering index?",
+      "back": [
+        {
+          "type": "text",
+          "content": "An index buys read speed with write speed and disk. Every `INSERT`, `UPDATE`, and `DELETE` on the table must update each index too, and most indexes are a B-tree, so a write is a random tree modification plus eventually a flush. Index everything and writes crawl."
+        },
+        {
+          "type": "text",
+          "content": "A covering index contains every column a query needs, so the database answers from the index alone and never touches the table. It is a real optimisation for wide-row reads, at the cost of an index that is even more expensive to maintain."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "caption": "A composite index is only left-prefix usable",
+          "code": "CREATE INDEX idx_orders_user_date ON orders (user_id, created_at);\n\n-- usable: equality on the leading column\nSELECT * FROM orders WHERE user_id = 42 ORDER BY created_at;\n\n-- NOT usable for ordering: created_at is not the leading column\nSELECT * FROM orders WHERE created_at > '2024-01-01';"
+        },
+        {
+          "type": "text",
+          "content": "That last asymmetry is the most common index mistake: column order in a composite index decides which queries it can serve, and the leading column has to be the one you filter on with equality."
+        }
+      ]
+    },
+    {
+      "id": "db-n-plus-one",
+      "category": "databases",
+      "front": "What is the N+1 query problem, and what fixes it?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A lazy association loads one object, then asks the database for each of its children in turn. One query becomes N+1, and the cost is network round trips rather than CPU -- so it is invisible in a test against a local database and brutal in production."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "caption": "Two round trips instead of one per parent",
+          "code": "-- N+1: 1 + N queries\nSELECT * FROM authors;\n-- then, for each author, SELECT * FROM books WHERE author_id = ?\n\n-- one query: the IN subquery is evaluated once\nSELECT b.* FROM books b\nWHERE b.author_id IN (\n    SELECT id FROM authors WHERE country = 'UK'\n);"
+        },
+        {
+          "type": "text",
+          "content": "In an ORM the fix is eager loading, which is the same thing expressed declaratively: `selectinload` for collections and `joinedload` for many-to-one. The symptom to watch for is a query log where a single request page issues a number of queries that scales with the number of rows."
+        }
+      ]
+    },
+    {
+      "id": "db-normalisation",
+      "category": "databases",
+      "front": "What does normalisation buy, and when should you denormalise?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Normalisation removes redundancy so each fact is stored once, which means updates cannot leave copies disagreeing. First normal form: no repeating groups, one value per cell. Second: every non-key column depends on the whole key. Third: no non-key column depends on another non-key column."
+        },
+        {
+          "type": "text",
+          "content": "The cost is joins, and joins are the thing you were trying to avoid reading. Denormalising a counter, or duplicating a display name, is a deliberate trade: you have accepted a write-path responsibility in exchange for a cheaper read."
+        },
+        {
+          "type": "text",
+          "content": "The honest reason teams denormalise is measurement, not theory. Do it when a query profile shows the normalised form is the bottleneck, and document where the duplicate now has to be kept in sync."
+        }
+      ]
+    },
+    {
+      "id": "test-pyramid",
+      "category": "testing",
+      "front": "What belongs in a unit test versus an integration test?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A unit test covers one unit in isolation -- a function, a reducer, a class -- with no network, no filesystem, no clock. An integration test covers several real parts working together, usually including a real boundary like a database."
+        },
+        {
+          "type": "text",
+          "content": "The failure this prevents is writing integration tests for logic and unit tests for wiring. Pure logic tested through a full stack is slow and gives terrible failure messages, and the wiring never gets a direct test at all."
+        },
+        {
+          "type": "text",
+          "content": "A useful rule: if the test would still pass when you replaced the database with a mock, it is probably a unit test wearing an integration costume. A stack of thin end-to-end tests on top of no unit tests is the actual failure mode, not the cure."
+        }
+      ]
+    },
+    {
+      "id": "test-flakiness",
+      "category": "testing",
+      "front": "What are the usual causes of a flaky test, in order of how common they are?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Shared state between tests is the big one: a fixture that is not reset, a module-level cache, a temp file that survives, or a database row another test created. Second is the real clock -- a timeout that is fine on a fast machine and marginal on a loaded CI box."
+        },
+        {
+          "type": "text",
+          "content": "Then nondeterminism: unseeded randomness, iteration order over a hash map, reliance on `Math.random` or the current time. Then real network calls and real sleeps. Then genuine concurrency in the code under test."
+        },
+        {
+          "type": "text",
+          "content": "The fix is always the same shape: inject the dependency instead of reaching for it. Seed the RNG, pass the clock in as a parameter, isolate the fixture. A flaky test is not bad luck, it is an uncontrolled dependency."
+        }
+      ]
+    },
+    {
+      "id": "test-arrange-act-assert",
+      "category": "testing",
+      "front": "What is arrange-act-assert, and why does one assertion cluster per test matter?",
+      "back": [
+        {
+          "type": "text",
+          "content": "AAA is the structural convention: set up the inputs, perform the one action, then assert on the observable results. The point is that the three phases are visually distinct, so a reader can tell the preconditions from the behaviour under test."
+        },
+        {
+          "type": "text",
+          "content": "One logical cluster per test means one failure message per behaviour. A test asserting twenty unrelated things reports the first failure and hides the other nineteen, and the name can no longer describe what it covers."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "The phases, named",
+          "code": "def test_rejects_a_card_from_an_unknown_category():\n    # arrange\n    deck = Deck(categories=[], cards=[make_card(category=\"nope\")])\n\n    # act\n    problems = validate(deck)\n\n    # assert: one cluster -- this rejection\n    assert problems == ['cards[0].category \"nope\" does not match any declared category']"
+        }
+      ]
+    },
+    {
+      "id": "test-doubles",
+      "category": "testing",
+      "front": "What is the difference between a fake, a stub, and a mock, and why does it matter?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A **fake** is a working implementation with a shortcut -- an in-memory database instead of a real one. A **stub** returns canned answers to queries. A **mock** also asserts that it was called with specific arguments, so the test fails if the interaction does not happen."
+        },
+        {
+          "type": "text",
+          "content": "The distinction matters because mocking an interaction tests the implementation, not the behaviour. A refactor that renames a method breaks every mock-based test while changing nothing observable. Assert on the result, and use a fake where you can."
+        },
+        {
+          "type": "text",
+          "content": "The practical rule: if your test breaks whenever you refactor without changing behaviour, you are testing the wrong thing."
+        }
+      ]
+    },
+    {
+      "id": "test-property-based",
+      "category": "testing",
+      "front": "What does a property-based test assert, and how is it different from an example test?",
+      "back": [
+        {
+          "type": "text",
+          "content": "An example test checks specific inputs give specific outputs. A property-based test states an invariant that must hold for *all* inputs, then generates many inputs and shrinks any counterexample to a minimal failing case."
+        },
+        {
+          "type": "text",
+          "content": "Properties are things like `reverse(reverse(xs)) == xs`, or `len(sort(xs)) == len(xs)`, or `dedupe(dedupe(xs)) == dedupe(xs)`. They catch the class of bug where one specific input is wrong, which an example test you did not think to write will never find."
+        },
+        {
+          "type": "text",
+          "content": "Shrinking is the part people underrate: a generator that produces a 200-element counterexample is nearly useless, and a shrinking library reduces it to three elements automatically."
+        }
+      ]
+    },
+    {
+      "id": "git-rebase-vs-merge",
+      "category": "git",
+      "front": "What is the actual difference between rebase and merge, and when is each right?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Merge preserves history literally: it records that two lines of development happened and were joined, producing a commit with two parents. Rebase replays your commits as if they had been written on top of the other branch, producing a linear history with no record of the divergence."
+        },
+        {
+          "type": "text",
+          "content": "Rebase is for your own unpushed commits, because it keeps the main branch history readable. Merge is for anything already pushed, because rebasing published history forces everyone to reconcile the rewritten commits, and the old references still exist in other clones."
+        },
+        {
+          "type": "text",
+          "content": "The rewrites generate new commit ids, which is the whole hazard. `git reflog` is what saves you when a rebase goes wrong."
+        }
+      ]
+    },
+    {
+      "id": "git-reflog-recovery",
+      "category": "git",
+      "front": "You did a bad reset and lost a commit. How do you get it back?",
+      "back": [
+        {
+          "type": "text",
+          "content": "`git reflog`. It records every position `HEAD` has held, including commits that are no longer reachable from any branch, so a `reset --hard` or a bad rebase does not actually destroy anything immediately."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "caption": "Find the commit, then move a branch back onto it",
+          "code": "git reflog                 # find the SHA before the reset\ngit reset --hard <sha>      # move the current branch back\ngit reset --hard ORIG_HEAD  # the pre-reset position, if you did not move"
+        },
+        {
+          "type": "text",
+          "content": "The entries expire, so this is a now-or-never tool. Do it immediately; the objects are still there for a couple of weeks by default because nothing has pruned them yet."
+        }
+      ]
+    },
+    {
+      "id": "git-bisect",
+      "category": "git",
+      "front": "How do you bisect a bug automatically instead of testing commits by hand?",
+      "back": [
+        {
+          "type": "text",
+          "content": "`git bisect` does a binary search over commit history, narrowing a range to the first bad commit in about log2(n) steps. `git bisect run` is the useful part: it drives the search with a command that exits 0 for good and non-zero for bad, so a test suite can do the bisecting for you."
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "caption": "Bisect with the test suite as the oracle",
+          "code": "git bisect start HEAD v1.2.0\ngit bisect run npm test\ngit bisect reset   # always clean up, even if the run aborts"
+        },
+        {
+          "type": "text",
+          "content": "The test you point it at has to be able to run at every commit in the range, which is why bisect goes wrong when the fix is recent and the older commits lack the test. Mark the good/bad bounds as narrowly as you can to avoid that."
+        }
+      ]
+    },
+    {
+      "id": "git-cherry-pick",
+      "category": "git",
+      "front": "When do you reach for `git cherry-pick`, and what is it not for?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It copies specific commits onto the current branch, leaving the source branch alone. The legitimate uses are narrow: backporting a one-commit fix to a maintenance branch, or picking up a single change from a long-running feature branch."
+        },
+        {
+          "type": "text",
+          "content": "It is not a merge. It ignores the surrounding history, so the commit arrives without the context it depended on, and the backport may not even be correct on the older code. It is also not for moving a whole branch -- use `git rebase --onto` for that, which replays the range rather than each commit in turn."
+        },
+        {
+          "type": "text",
+          "content": "Because cherry-pick creates new commits, the old and new versions have different ids. Duplicating a commit by hand across branches makes the two lines of history permanently diverge."
+        }
+      ]
+    },
+    {
+      "id": "git-precommit-hooks",
+      "category": "git",
+      "front": "Why should a pre-commit hook call the same command as CI instead of a different one?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A hook that runs a different command than CI is a hook that can disagree with CI, and the disagreement always resolves in your favour and against the reviewer. The cheapest way to keep them in step is to have the hook invoke the same gate, so a passing commit is a commit CI will also pass."
+        },
+        {
+          "type": "code",
+          "language": "toml",
+          "caption": "A local hook delegating to the project gate",
+          "code": "[[repos]]\nrepo = \"local\"\n\n[[repos.hooks]]\nid = \"check\"\nname = \"just check (format, lint, typecheck)\"\nentry = \"just check\"\nlanguage = \"system\"\ntypes = [\"commit\"]"
+        },
+        {
+          "type": "text",
+          "content": "Use `language = \"system\"` and a `local` repo for a project-level gate, so the hook runs in the project's own environment and uses the pinned tools. Mirroring a remote hook repo instead pins you to whatever version that repo last tagged, which can be a different tool from the one you have pinned locally."
+        }
+      ]
+    },
+    {
+      "id": "sys-process-vs-thread",
+      "category": "systems",
+      "front": "What is the difference between a process and a thread?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A process is an address space and a set of resources: its own virtual memory, open file descriptors, and a security context. A thread is a stack and a set of registers within a process. Threads in one process share the address space, so a write by one is immediately visible to the others -- which is exactly why they are fast to create and easy to get wrong."
+        },
+        {
+          "type": "text",
+          "content": "Switching between processes costs an address-space switch; switching between threads is a register and stack switch, orders of magnitude cheaper. That is why a thread pool is the right answer for I/O-bound concurrency and processes are the right answer when you want a crash boundary or true parallelism."
+        },
+        {
+          "type": "text",
+          "content": "The practical rule: threads share mutable state so you must synchronise it; processes share nothing so you must serialise it. Pick whichever constraint you can live with."
+        }
+      ]
+    },
+    {
+      "id": "sys-race-condition",
+      "category": "systems",
+      "front": "What is a race condition, and what are the ways to prevent one?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A race is when the result depends on the timing of two operations that were never ordered relative to each other. Check-then-act is the classic shape: the check and the act are two steps, and another thread can run between them."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "Check-then-act, unlocked",
+          "code": "if cache.get(key) is None:      # thread A and B both see None\n    value = compute(key)          # both compute\n    cache[key] = value            # both write; one result is lost"
+        },
+        {
+          "type": "text",
+          "content": "Four ways out, in increasing order of cost: make the operation atomic (one compare-and-swap instead of check then act); protect the region with a lock or mutex; hand the work to a single-threaded owner via a queue, which also gives ordered execution for free; or design it so there is no shared mutable state, which is the only one that scales."
+        },
+        {
+          "type": "text",
+          "content": "The last one is why immutability and message passing are the default advice. A race that is impossible to express is better than a race that is merely unlikely."
+        }
+      ]
+    },
+    {
+      "id": "sys-deadlock",
+      "category": "systems",
+      "front": "What are the four conditions for a deadlock, and which one do you usually attack?",
+      "back": [
+        {
+          "type": "text",
+          "content": "All four must hold simultaneously: **mutual exclusion** (the resources are not shareable), **hold and wait** (a thread holds one resource while waiting for another), **no preemption** (a held resource cannot be forcibly taken), and **circular wait** (there is a cycle of threads each waiting on the next)."
+        },
+        {
+          "type": "text",
+          "content": "In practice you break **circular wait** by imposing a global order on lock acquisition and always taking them in that order. It is the easiest to enforce mechanically, and it needs no timeouts and no restarts. Breaking hold-and-wait by releasing everything before acquiring more is the other common approach."
+        },
+        {
+          "type": "text",
+          "content": "A livelock is the related failure that is easy to mistake for it: two threads stay responsive, keep undoing each other's work, and make no progress. Timeouts and randomised backoff are the practical defences against both."
+        }
+      ]
+    },
+    {
+      "id": "sys-false-sharing",
+      "category": "systems",
+      "front": "What is false sharing, and why does it make correct parallel code slow?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Cache lines are the unit of coherence between cores, typically 64 bytes and holding several variables. Two threads incrementing different variables that happen to sit in the same line invalidate each other's line on every write, so the cores serialise against each other over memory they are not even sharing."
+        },
+        {
+          "type": "text",
+          "content": "That is false sharing: a performance bug with no effect on correctness, caused purely by layout. The classic shape is a per-thread counter packed in an array, where adjacent elements share a line."
+        },
+        {
+          "type": "text",
+          "content": "The fix is padding or alignment to keep hot variables on separate lines, which is why HPC counters are often declared with an explicit pad. It is one of the few cases where a memory-allocating change buys a large speedup for free."
+        }
+      ]
+    },
+    {
+      "id": "sys-blocking-io",
+      "category": "systems",
+      "front": "What is the difference between blocking and non-blocking I/O, and what does async buy?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Blocking I/O parks the thread until the operation completes. Non-blocking I/O returns immediately with whatever is available, often signalling that the resource is not ready yet. Neither is asynchronous in the useful sense: both still occupy a thread and both still need one per concurrent operation."
+        },
+        {
+          "type": "text",
+          "content": "Asynchronous I/O hands the request to the kernel, releases the thread, and only schedules it back when the data is actually ready. That is the difference that matters: a thread-per-connection server needs 8 MB of stack per idle connection and hits its limit, while an event loop holds thousands on one thread."
+        },
+        {
+          "type": "text",
+          "content": "The catch is that async buys nothing for CPU-bound work. You cannot compute inside an event loop callback without blocking it, which is why the pattern is async I/O plus a worker pool for the CPU parts."
+        }
+      ]
+    },
+    {
+      "id": "sys-recursion-cost",
+      "category": "systems",
+      "front": "Why can deep recursion blow the stack when an equivalent loop is fine?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Each recursive call allocates a stack frame holding its parameters, locals, and a return address, and the frames stay live until the calls unwind. Depth is therefore bounded by the stack size, which is a fixed chunk of memory set when the process or thread starts -- typically 1 MB on Linux, 8 MB on Windows."
+        },
+        {
+          "type": "text",
+          "content": "Python raises `RecursionError` at a much lower limit, around 1000 frames by default, because its frames are heap objects and it checks the depth on every call. The error is a guard, not a bug, and it is configurable."
+        },
+        {
+          "type": "text",
+          "content": "A tail call -- one where the recursive call is the last thing the function does -- reuses the frame instead of growing the stack, and can be compiled into a jump. Few languages do this: Scheme specifies it, Python deliberately does not. Everywhere else, convert the tail recursion to a loop."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "The same traversal, as a loop",
+          "code": "def walk(node):\n    while node is not None:\n        visit(node)\n        node = node.next   # constant stack, no frame per element"
+        }
+      ]
+    }
+  ]
+}

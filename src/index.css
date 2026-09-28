@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/*
+ * The app ships dark-only by design, so the dark values are the base values
+ * rather than an opt-in variant. `color-scheme` tells the browser to render
+ * native controls, scrollbars, and form widgets dark too.
+ */
+:root {
+  color-scheme: dark;
+}
+
+@theme {
+  --color-canvas: #0b0f17;
+  --color-surface: #131a26;
+  --color-surface-raised: #1a2231;
+  --color-line: #26303f;
+
+  --color-ink: #e6edf3;
+  --color-ink-muted: #9aa7b8;
+  --color-ink-faint: #6b7787;
+
+  --color-accent: #58a6ff;
+  --color-got: #3fb950;
+  --color-missed: #f85149;
+
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+}
+
+@layer base {
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    /*
+     * Stops iOS Safari from zooming the viewport when a control is focused.
+     */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Respect the reduced-motion preference across every animated affordance. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /*
+   * Card flip. A three-dimensional transform on the inner wrapper carries the
+   * rotation; the two faces are pre-rotated in opposite directions and hidden
+   * with `backface-visibility` so only the facing side is ever painted.
+   *
+   * Both faces sit in the same grid cell rather than being absolutely
+   * positioned. Absolute positioning here gives the wrapper no intrinsic
+   * height, so it collapses to zero and the faces spill out on top of each
+   * other. Stacking them as grid items sizes the card to the taller face and
+   * keeps the height identical across the flip, so nothing shifts mid-rotation.
+   */
+  .flip-scene {
+    perspective: 75rem;
+  }
+
+  .flip-inner {
+    display: grid;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .flip-inner[data-flipped="true"] {
+    transform: rotateY(180deg);
+  }
+
+  .flip-face {
+    position: relative;
+    grid-area: 1 / 1;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .flip-back {
+    transform: rotateY(180deg);
+  }
+
+  /*
+   * Reduced motion still needs the rotation to be *instant* rather than
+   * removed, otherwise both faces would be visible edge-on. The global
+   * override above collapses the duration; this keeps the end state applied.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .flip-inner {
+      transition: none;
+    }
+  }
+
+  /*
+   * Shiki emits its own background colour to keep the token palette legible.
+   * It is kept rather than made transparent, because the github-dark token
+   * colours only have sufficient contrast against that specific background.
+   */
+  .shiki {
+    @apply overflow-x-auto rounded-lg p-4 font-mono text-[0.8125rem] leading-relaxed;
+    background-color: #0d1117 !important;
+  }
+
+  .shiki code {
+    @apply bg-transparent;
+  }
+
+  /*
+   * A visible focus ring on every interactive element. `:focus-visible`
+   * scopes it to keyboard interaction so pointer users do not see it.
+   */
+  :where(a, button, [tabindex]):focus-visible {
+    @apply outline-accent outline-2 outline-offset-2;
+  }
+}
