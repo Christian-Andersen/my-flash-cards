@@ -122,9 +122,15 @@ export function FlipCard({
             </span>
           </div>
 
-          {/* Scrolls inside the card rather than growing the page, so a long
-              question still fits on a short screen. */}
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          {/* Keyed to the card, so the region is rebuilt rather than refilled
+              when the card changes: an element keeps its `scrollTop` when its
+              contents are swapped, which left a scrolled answer scrolled on
+              every card after it. Remounting the region also resets the
+              horizontal scroll of any wide code block inside it. The face is
+              deliberately not keyed, because its flip-back runs on this same
+              element. Scroll is not reset on flipping, so turning an answer
+              front and back again stays where you left it. */}
+          <div key={card.id} className="min-h-0 flex-1 overflow-y-auto pr-1">
             <h2 className="text-ink text-xl leading-snug font-semibold text-balance sm:text-2xl">
               <InlineText text={card.front} />
             </h2>
@@ -161,7 +167,7 @@ export function FlipCard({
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div key={card.id} className="min-h-0 flex-1 overflow-y-auto pr-1">
             <AnswerBlocks blocks={card.back} />
           </div>
 

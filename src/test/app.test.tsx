@@ -51,6 +51,19 @@ function visibleQuestion(): string {
 }
 
 /**
+ * The scrollable region inside a face. Both faces are always mounted, so the
+ * index picks one out rather than the flip state.
+ */
+function regionOf(face: "question" | "answer"): Element | null {
+  const index = face === "question" ? 0 : 1;
+  return (
+    document
+      .querySelectorAll(".flip-face")
+      [index]?.querySelector(".overflow-y-auto") ?? null
+  );
+}
+
+/**
  * The whole study order, walked from wherever the cursor happens to be.
  *
  * The deck is a loop, so this is a rotation of the same sequence; use
@@ -691,6 +704,79 @@ describe("card layout", () => {
     for (const face of document.querySelectorAll(".flip-face")) {
       expect(face.querySelectorAll(".overflow-y-auto")).toHaveLength(1);
     }
+  });
+
+  it("rebuilds the scrolling regions on every card change, so scroll cannot carry over", () => {
+    render(<App />);
+
+    /*
+     * The faces stay mounted so the flip can be a rotation, which means the
+     * region is the same element from one card to the next -- and an element
+     * keeps its `scrollTop` when only its contents are swapped. Reading an
+     * answer, scrolling down, then moving on left every following answer
+     * scrolled to that same offset.
+     *
+     * jsdom has no layout, so `scrollTop` is always 0 and the reset itself
+     * cannot be observed here. The rebuild is what performs the reset, so that
+     * is the thing asserted: after a card change the region must be a
+     * different node. Removing the `key` makes this fail.
+     */
+    const questionBefore = regionOf("question");
+    const answerBefore = regionOf("answer");
+    expect(questionBefore).not.toBeNull();
+    expect(answerBefore).not.toBeNull();
+
+    // Grading is the path that carries the most state: the answer is showing
+    // and scrolled when the card changes.
+    reveal();
+    fireEvent.click(gotIt());
+    expect(regionOf("question")).not.toBe(questionBefore);
+    expect(regionOf("answer")).not.toBe(answerBefore);
+
+    // And the session-level navigation paths, which do not grade at all.
+    const questionAfterGrade = regionOf("question");
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(regionOf("question")).not.toBe(questionAfterGrade);
+
+    const questionAfterNext = regionOf("question");
+    fireEvent.click(screen.getByRole("button", { name: /prev/i }));
+    expect(regionOf("question")).not.toBe(questionAfterNext);
+  });
+
+  it("keeps the faces mounted across a card change, so the flip-back can animate", () => {
+    render(<App />);
+
+    /*
+     * The counterpart to the test above, and the reason the `key` sits on the
+     * scroll region rather than the face. Grading a card changes the card and
+     * hides the answer in the same update, so the face has to run its
+     * rotateY(180deg) back to zero on the element it is already on. Keying the
+     * face would remount it at zero degrees instead, and the reverse flip would
+     * be silently dropped.
+     *
+     * The animation itself cannot be observed here -- jsdom has no transitions
+     * -- but node identity can: a remounted face is a different element.
+     */
+    const facesBefore = [...document.querySelectorAll(".flip-face")];
+    expect(facesBefore).toHaveLength(2);
+
+    reveal();
+    fireEvent.click(gotIt());
+    expect([...document.querySelectorAll(".flip-face")]).toEqual(facesBefore);
+  });
+
+  it("keeps the scroll position when an answer is flipped away and back", () => {
+    render(<App />);
+
+    // The opposite of the case above, and the reason the reset is keyed to the
+    // card rather than to the flip: turning over to read the question and back
+    // should not throw away where you were.
+    reveal();
+    const answer = regionOf("answer");
+    expect(answer).not.toBeNull();
+
+    fireEvent.click(backToQuestion());
+    expect(regionOf("answer")).toBe(answer);
   });
 });
 

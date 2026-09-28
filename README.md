@@ -220,6 +220,18 @@ each face scrolls its own content when it will not fit. The settings view keeps
 `min-h-dvh`, because the category list really is taller than a phone and
 bounding it would clip the toggles.
 
+**Why the scroll resets on the card but not on the flip.** Both faces stay mounted
+so the flip is a rotation rather than a state swap, which means the scroll
+container is the same element from one card to the next — and an element keeps
+its `scrollTop` when only its contents are swapped. Reading an answer, scrolling
+down, then moving on left every later answer scrolled to that offset. The region
+is keyed to the card so it is rebuilt instead of refilled. The key is on the
+region and not the face because grading changes the card and hides the answer in
+the same update, so the face has to run its reverse rotation on the element it is
+already on; remounting it would drop the flip-back. Keying on the flip instead
+would be wrong the other way, throwing away your place every time you turned
+over to read the question and back.
+
 **Why the confirmation is not a native `<dialog>`.** A native dialog brings focus
 trapping and <kbd>Esc</kbd> handling for free, but jsdom does not implement
 `showModal`, so it could only be tested through the fallback path. Hand-rolling it
