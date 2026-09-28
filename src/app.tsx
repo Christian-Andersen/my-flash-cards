@@ -234,10 +234,6 @@ export function App() {
         />
       )}
 
-      <footer className="text-ink-faint mt-auto pt-4 text-center text-xs">
-        Progress is saved in this browser only.
-      </footer>
-
       {confirmingReset && (
         <ConfirmDialog
           title="Reset progress?"
