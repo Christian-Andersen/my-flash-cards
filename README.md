@@ -125,8 +125,7 @@ artifact, not a source file.
 
 1. **`ci`** — `npm ci` then `just ci` (format, lint, typecheck, tests).
 2. **`update-and-deploy`** — only after `ci` passes: `npm ci`, `just build`,
-   create the Pages project if it is missing, then `wrangler pages deploy
-./dist`.
+   then `wrangler pages deploy ./dist`.
 
 Everything runs inside `nix develop`, so CI and local development share one
 pinned toolchain. `flake.lock` is committed, so the `nixpkgs` revision is the
@@ -137,12 +136,13 @@ the pinned flake. It is kept out of the default shell so `just r` does not
 pull a tool only CI needs. Calling the pinned binary also means the deploy is
 reproducible, rather than resolving whatever `npx` fetches at run time.
 
-Both jobs need the two secrets `CLOUDFLARE_ACCOUNT_ID` and
+The deploy job needs the two secrets `CLOUDFLARE_ACCOUNT_ID` and
 `CLOUDFLARE_API_TOKEN`, configured under **Settings → Actions → Secrets** in
 your Forgejo instance. The Pages project name is taken from the repository
-name; change it in the workflow if the project differs. The first run creates
-the project, with `main` as the production branch to match the push trigger.
-Later runs see it exists and skip straight to deploying.
+name; change it in the workflow if the project differs. The project has to
+exist before the first run — `wrangler pages deploy` fails outright otherwise
+— so create it in the dashboard, with `main` as the production branch to match
+the push trigger.
 
 ## Deploying to Cloudflare Pages
 

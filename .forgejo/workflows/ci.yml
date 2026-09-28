@@ -35,36 +35,6 @@ jobs:
       # Without this the deploy step below has nothing to upload.
       - name: Build
         run: nix develop --command just build
-      - name: Create the Pages project
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        # `pages deploy` fails outright if the project does not exist, so the
-        # first run has to create it. Wrangler has no idempotent create and
-        # exits non-zero for "already exists" the same way it does for a bad
-        # token, so the state is checked here rather than by ignoring the exit
-        # status -- that way a credentials problem still fails the job instead
-        # of being read as "create it".
-        #
-        # `list --json` labels each project "Project Name", not "name".
-        run: |
-          wrangler() { nix develop .#deploy --command wrangler "$@"; }
-          project='${{ forgejo.event.repository.name }}'
-          if ! projects="$(wrangler pages project list --json)"; then
-            echo "Could not list Pages projects; check the API token." >&2
-            exit 1
-          fi
-          if nix develop .#deploy --command node -e '
-            const name = process.argv[1];
-            const found = JSON.parse(process.argv[2]).some(
-              (project) => project["Project Name"] === name);
-            process.exit(found ? 0 : 1);
-          ' "$project" "$projects"; then
-            echo "Pages project '$project' already exists."
-          else
-            echo "Pages project '$project' does not exist; creating it."
-            wrangler pages project create "$project" --production-branch=main
-          fi
       - name: Publish to Cloudflare Pages
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
