@@ -1,3 +1,35 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":disableDependencyDashboard"],
+  "semanticCommits": "enabled",
+  "nix": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Group Nix flake input updates into a single PR",
+      "matchManagers": ["nix"],
+      "matchUpdateTypes": ["digest"],
+      "groupName": "Nix flake inputs",
+      "groupSlug": "nix-flake-inputs"
+    },
+    {
+      "description": "Group non-major CI action updates in .forgejo/workflows; major bumps get their own PR",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["digest", "patch", "minor"],
+      "groupName": "CI workflow actions",
+      "groupSlug": "ci-workflow-actions"
+    },
+    {
+      "description": "Group non-major devDependency updates; the toolchain here moves together, and the pairs that have to agree (vitest with @vitest/coverage-v8, tailwindcss with @tailwindcss/vite) do so in one PR",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "Dev dependencies",
+      "groupSlug": "dev-dependencies"
+    }
+  ]
 }
