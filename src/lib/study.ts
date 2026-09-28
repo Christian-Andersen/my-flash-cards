@@ -41,8 +41,10 @@ export type StudyState = {
   /** Index into the current view queue. See {@link viewQueue}. */
   readonly cursor: number;
   /**
-   * Drives the shuffle. Fixed for the life of a session, so the queue keeps one
-   * order and the cursor stays meaningful across a reload.
+   * Drives the shuffle. Drawn on load and not persisted, so every page load
+   * deals a new order, but the order is fixed for the life of the session --
+   * the queue is re-derived from this on every read, so a seed that changed
+   * underneath would move the cursor onto a different card.
    */
   readonly seed: number;
   /**

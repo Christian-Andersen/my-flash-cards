@@ -66,8 +66,9 @@ function regionOf(face: "question" | "answer"): Element | null {
 /**
  * The whole study order, walked from wherever the cursor happens to be.
  *
- * The deck is a loop, so this is a rotation of the same sequence; use
- * {@link rotateTo} to line two walks up before comparing them.
+ * A rotation of the same sequence, since the deck is a loop and the walk starts
+ * at the cursor. Comparing two walks only makes sense when they are lined up,
+ * so the tests that do that do it themselves.
  */
 function fullOrder(): string[] {
   const order: string[] = [];
@@ -76,12 +77,6 @@ function fullOrder(): string[] {
     fireEvent.click(screen.getByRole("button", { name: /^next$/i }));
   }
   return order;
-}
-
-/** Reorders a walk so it starts at `first`, making two walks comparable. */
-function rotateTo(order: string[], first: string): string[] {
-  const at = order.indexOf(first);
-  return at === -1 ? order : [...order.slice(at), ...order.slice(0, at)];
 }
 
 /** Advances until `found` returns true for the visible card, or the deck runs out. */
@@ -273,9 +268,11 @@ describe("answered cards do not come back", () => {
 describe("the deck is shuffled", () => {
   it("opens on a different card for each new session", () => {
     // cards.json is grouped by category, so unshuffled it would open on the
-    // same card every time. Twenty fresh sessions over 57 cards: the expected
-    // distinct count is around 17, so a low bar still catches a deck that
-    // failed to shuffle at all.
+    // same card every time. Twenty sessions with independent seeds land on
+    // around eighteen distinct cards, which twenty draws from a deck this size
+    // reach without depending on the deck size: the expected count is
+    // n * (1 - (1 - 1/n)^20), near 18 for any n past a few dozen. A low bar
+    // still catches a deck that failed to shuffle at all, which would give 1.
     const firsts = new Set<string>();
     for (let i = 0; i < 20; i++) {
       localStorage.clear();
@@ -287,30 +284,29 @@ describe("the deck is shuffled", () => {
     expect(firsts.size).toBeGreaterThan(8);
   });
 
-  it("keeps the same order after a reload", () => {
-    // The seed is persisted precisely so a reload does not reshuffle under a
-    // cursor that points at a card index.
+  it("deals a new order after a reload", () => {
+    // The seed is drawn on load and not persisted, so a refresh is a new
+    // shuffle rather than a continuation. Only the grades carry over, which is
+    // the part worth resuming.
     const first = render(<App />);
     const before = fullOrder();
     first.unmount();
 
     render(<App />);
-    // The cursor is restored too, so the second walk starts elsewhere in the
-    // loop; rotating it onto the same card compares order, not position.
-    expect(rotateTo(fullOrder(), before[0] as string)).toEqual(before);
+    // Same session, same card count, but a different permutation. The 1-in-8!
+    // chance of two seeds agreeing is why this compares the whole order and
+    // not a single card.
+    expect(fullOrder()).not.toEqual(before);
+    expect(fullOrder()).toHaveLength(before.length);
   });
 
   it("reshuffles on reset", () => {
-    const first = render(<App />);
-    const before = fullOrder();
-    first.unmount();
     render(<App />);
-    // Same session, so reloading must not change the order...
-    expect(rotateTo(fullOrder(), before[0] as string)).toEqual(before);
+    const before = fullOrder();
 
     fireEvent.click(resetControl());
     fireEvent.click(confirmReset());
-    // ...but a reset draws a new seed, so it does.
+    // A reset also draws a new seed, so a second pass is a different order.
     expect(fullOrder()).not.toEqual(before);
   });
 

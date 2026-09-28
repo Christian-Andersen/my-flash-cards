@@ -64,6 +64,21 @@
       "id": "systems",
       "label": "Systems",
       "accent": "sky"
+    },
+    {
+      "id": "polymorphism",
+      "label": "Polymorphism",
+      "accent": "sky"
+    },
+    {
+      "id": "type-systems",
+      "label": "Type Systems",
+      "accent": "emerald"
+    },
+    {
+      "id": "language-design",
+      "label": "Language Design",
+      "accent": "rose"
     }
   ],
   "cards": [
@@ -1197,6 +1212,842 @@
           "language": "python",
           "caption": "The same traversal, as a loop",
           "code": "def walk(node):\n    while node is not None:\n        visit(node)\n        node = node.next   # constant stack, no frame per element"
+        }
+      ]
+    },
+    {
+      "id": "polymorphism-three-kinds",
+      "category": "polymorphism",
+      "front": "What are the three kinds of polymorphism, and which one is the only one the type system itself relates?",
+      "back": [
+        {
+          "type": "text",
+          "content": "**Ad hoc** gives one name several unrelated implementations and picks between them by argument type. **Parametric** writes one body for every type and proves it relates only the abstract type variable. **Subtyping** makes the *runtime* type of a value pick the implementation, which is the only one of the three where the declared type is connected to the value's actual type. Java has all three at once, often in one expression, which is why \"is it polymorphic?\" rarely identifies the mechanism."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "all three in one signature list",
+          "code": "// ad hoc: one name, unrelated bodies\nfunction render(shape: Shape): string;\nfunction render(data: unknown): string;\n\n// parametric: one body, every type\nfunction first<T>(xs: readonly T[]): T { return xs[0]!; }\n\n// subtyping: the runtime type of the value picks the body\nfunction area(shape: Shape): number { return shape.area(); }"
+        }
+      ]
+    },
+    {
+      "id": "ad-hoc-polymorphism",
+      "category": "polymorphism",
+      "front": "What makes polymorphism 'ad hoc', and why is it considered the weakest of the three?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A single name stands for several implementations that have nothing to do with each other, and the language picks one at each call site by looking at the argument types. The bodies are related only by the name, not by the type system, so nothing can be proved across the overload set: there is no way to write a function that takes 'any of these' without naming the overload set again. It is the oldest of the three and the least useful, because the name is a label rather than a contract."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "the declaration is the contract; the implementation is a shell",
+          "code": "declare function fmt(value: string): string;\ndeclare function fmt(value: number): string;\ndeclare function fmt(value: Date): string;\n\n// Every overload is now just a case of this one. Nothing in the type system\n// ties the three signatures together.\ndeclare function fmt(value: string | number | Date): string;"
+        }
+      ]
+    },
+    {
+      "id": "function-overloading",
+      "category": "polymorphism",
+      "front": "When is overloading a name actually a good idea?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Overload when the operations are genuinely one operation applied to different representations — `add` over machine words, `printf`-style formatting, `open` over a path or a handle. Do not overload when the behaviours are unrelated and the name is a vague verb, because the result is a family of functions that can only be read as a set. Two hard limits are worth knowing: overloads are chosen from the *argument* types, never the expected result, so two overloads differing only in return type are a compile error rather than two functions."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "differing only in return type is a duplicate, not an overload",
+          "code": "function parse(s: string): number;\nfunction parse(s: string): string;   // Duplicate function implementation\nfunction parse(s: string): number { return Number(s); }"
+        },
+        {
+          "type": "code",
+          "language": "cpp",
+          "caption": "overloads share a name and are chosen by argument types",
+          "code": "std::string describe(const std::string& s);\nstd::string describe(int n);\nstd::string describe(double d);"
+        }
+      ]
+    },
+    {
+      "id": "overload-resolution",
+      "category": "polymorphism",
+      "front": "How does a compiler choose between overloads, and what makes a call ambiguous?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Most languages rank the candidates instead of guessing: an exact match beats one needing a widening conversion, a promotion beats a conversion, and ties fall back to a declared preference order. The subtlety is that two conversions of the same rank are an ambiguity, not a coin flip, and an implicit conversion can make a surprising overload win over the one you meant. When a call is ambiguous the fix belongs at the call site — an explicit cast or an argument change — not in the overload set."
+        },
+        {
+          "type": "code",
+          "language": "cpp",
+          "caption": "one char literal is a clear error, one float is genuinely ambiguous",
+          "code": "void f(long);\nvoid f(int);\n\nf('c');    // char -> int is a promotion, char -> long a conversion: f(int) wins\nf(1.0f);   // ERROR: float -> long and float -> int are the same rank"
+        }
+      ]
+    },
+    {
+      "id": "operator-overloading",
+      "category": "polymorphism",
+      "front": "What does operator overloading actually bind, and what makes it read well or badly?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It binds a symbol the language already owns to a function of your type, which in most languages is expressed as implementing a trait or interface. It reads well when the result is genuinely a value of the same shape — vector addition, a matrix product, money arithmetic that cannot drift. It reads badly when the operator is made to do something its spelling does not suggest, or when it mutates in place, because `a + b` returning `void` breaks the expectation that an expression yields a value."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "caption": "Self, Rhs and Output are what the operator needs to know",
+          "code": "use std::ops::Add;\n\n#[derive(Clone, Copy)]\nstruct Vec2 { x: f64, y: f64 }\n\n// Output names the type the expression evaluates to, which is why the\n// operator can be chained.\nimpl Add for Vec2 {\n    type Output = Vec2;\n    fn add(self, rhs: Vec2) -> Vec2 {\n        Vec2 { x: self.x + rhs.x, y: self.y + rhs.y }\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "operator-precedence-associativity",
+      "category": "polymorphism",
+      "front": "Can you overload an operator to change its precedence or associativity?",
+      "back": [
+        {
+          "type": "text",
+          "content": "No. Precedence and associativity belong to the grammar, not to the operator: the parser has already turned `a - b - c` into a nested call tree before overload resolution runs, so there is nothing left for an implementation to influence. Overloading chooses *which* function a decided call shape resolves to. What you can change is which types the symbol applies to, and — in some languages — whether a new spelling is allowed, such as Rust's `!=` being supplied for free by implementing `PartialEq`."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "caption": "the grammar fixed the grouping; the impl only fixes the arithmetic",
+          "code": "impl std::ops::Sub for Vec2 {\n    type Output = Vec2;\n    fn sub(self, rhs: Vec2) -> Vec2 {\n        Vec2 { x: self.x - rhs.x, y: self.y - rhs.y }\n    }\n}\n\n// a - b - c is ((a - b) - c), whatever Sub is implemented for.\n// a - (b - c) would be a different, non-short-circuiting program."
+        }
+      ]
+    },
+    {
+      "id": "parametric-polymorphism",
+      "category": "polymorphism",
+      "front": "What is parametric polymorphism, and what exactly does the type system promise about it?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A single definition serves every type, and the type system checks it by reasoning only about an abstract type variable. Because nothing about the concrete type is assumed, the same body is guaranteed to work for all of them — which is why `map`, `filter` and `id` are one function at every type rather than one per type. The guarantee is formalised as the parametricity theorem, and it is what stops a generic body from inspecting a value of its own type argument: there is no operation on `T` to call."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "sound because the body needs no property of T",
+          "code": "function map<A, B>(xs: readonly A[], f: (a: A) => B): B[] {\n  return xs.map(f);\n}\n\n// This is the guarantee doing work. A is only a type variable, so\n// xs[0].compareTo(0) is rejected: A has no compareTo, for any A."
+        }
+      ]
+    },
+    {
+      "id": "generic-function",
+      "category": "polymorphism",
+      "front": "What is a generic function, and when do you have to write the type argument out?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A function whose signature mentions type variables, so one body serves many types. You rarely name the type argument yourself because the arguments already determine it, but the declaration is still the contract — which is why an explicit argument exists for the cases inference cannot settle, such as a call with no informative argument at all. Naming it is also the fix for an inference that picks a wider type than you intended, since an explicit argument is a constraint rather than a guess."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "caption": "inference usually fills in T; ::<> settles the rest",
+          "code": "fn largest<T: PartialOrd>(list: &[T]) -> &T {\n    let mut best = &list[0];\n    for item in list {\n        if item > best { best = item; }\n    }\n    best\n}\n\nlet a = largest(&[1, 5, 3]);      // T = i32, inferred\nlet b = Vec::<f64>::new();       // explicit: no argument to infer from"
+        }
+      ]
+    },
+    {
+      "id": "erasure-vs-monomorphisation",
+      "category": "polymorphism",
+      "front": "Do generics cost anything at runtime? What are the possible answers?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A type argument carries no runtime behaviour, so the language picks a strategy. **Monomorphisation** compiles a separate copy per instantiation — Rust, C++ — which gives maximum optimisation and a bigger binary. **Erasure** discards the types — Java, TypeScript — so every value shares one representation and a `T` in the signature buys nothing at runtime; in TypeScript that is why `x as B` is an unchecked assertion the compiler cannot verify. The middle path is **specialisation**, which keeps a runtime check on a boxed argument."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "the cast is trust, not a conversion",
+          "code": "// Erasure. Nothing checks this; it asserts a fact about the DOM.\nconst el = document.querySelector(\"#app\") as HTMLDivElement;\n\n// Without the cast, the type is Element | null and the error surfaces now.\nconst unsafe = document.querySelector(\"#app\");"
+        },
+        {
+          "type": "code",
+          "language": "java",
+          "caption": "erasure is why these are one class at runtime",
+          "code": "List<String> names = new ArrayList<>();\nList<Integer> counts = new ArrayList<>();\n\n// names.getClass() == counts.getClass() at runtime, so a raw cast is\n// representable and only fails when it is used."
+        }
+      ]
+    },
+    {
+      "id": "generic-programming",
+      "category": "polymorphism",
+      "front": "What does generic programming ask of you beyond writing a generic function?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It asks you to find the smallest interface that still lets the code be written once. Every bound and every required method is a tax on every future instantiation, and you cannot see the callers you are writing for, so the pressure is to be stingy. That is the trade the discipline makes deliberately: a smaller interface means more types can use the code, at the cost of some callers needing their own wrapper. Over-narrow generic code is a common way to lose the benefit it was written for."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "the constraint buys one member and rules out other callers",
+          "code": "function longest<T extends { length: number }>(a: T, b: T): T {\n  return a.length >= b.length ? a : b;\n}\n\nlongest(\"abc\", \"de\");                        // fine\nlongest({ length: 1 }, { length: 2 });      // fine\nlongest([1, 2], new Set([3, 4]));           // error: Set has no length"
+        }
+      ]
+    },
+    {
+      "id": "subtyping",
+      "category": "polymorphism",
+      "front": "What is subtyping, and what has to hold for one type to be a subtype of another?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A type S is a subtype of T when every value of S can be used wherever a T is required, and the standard is *every* context, not just assignment. That context sensitivity is the whole difficulty: if a function takes a `T` it may read a T, call its methods, pass it to a mutator, and store it — so a subtype has to keep all of that working. It also explains the first surprise most people meet, namely that a collection of a subtype is not a collection of its supertype."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "one direction is safe and the other is not",
+          "code": "type Animal = { name: string };\ntype Dog = Animal & { bark(): void };\n\ndeclare const dogs: Dog[];\ndeclare const animals: Animal[];\n\nconst ok: Animal[] = dogs;   // safe: a Dog[] IS an Animal[]\nconst bad: Dog[] = animals;   // unsound: an Animal is not a Dog"
+        }
+      ]
+    },
+    {
+      "id": "liskov-substitution",
+      "category": "polymorphism",
+      "front": "What does the Liskov substitution principle actually forbid?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It forbids a subtype from changing the meaning of the operations it inherits: it may not strengthen preconditions, weaken postconditions, or change which return values are possible. A subtype that is also a supertype's only occasional guest is not a subtype at all, it is a specialisation. The principle is most useful as a design smell test — a hierarchy where substitution fails is usually a hierarchy chosen for code reuse, where composition or an interface would say the same thing honestly."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "a read-only promise a subtype can break",
+          "code": "interface Reader {\n  items(): readonly string[];\n}\n\nclass Live implements Reader {\n  private buffer: string[] = [];\n  items(): string[] { return this.buffer; }   // returns the mutable array\n  write(s: string) { this.buffer.push(s); }   // a Reader can be written to\n}\n\n// A caller holding a Reader is entitled to assume nobody writes to it."
+        }
+      ]
+    },
+    {
+      "id": "virtual-function",
+      "category": "polymorphism",
+      "front": "What does a virtual function buy you that a plain method does not?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It makes dispatch depend on the runtime type of the receiver rather than the type it was declared as, so a call through a base reference can land in a derived override. That is what makes open/closed extension work: new subclasses plug into code that was compiled without them. The price is that the call target is no longer visible in the source, and the call becomes an indirect jump the compiler has to look up rather than a call it can inline."
+        },
+        {
+          "type": "code",
+          "language": "cpp",
+          "caption": "a pure virtual function makes the class abstract",
+          "code": "struct Shape {\n  virtual ~Shape() = default;        // without this, deleting via Shape leaks\n  virtual double area() const = 0;   // = 0 makes the class abstract\n};\n\nstruct Circle : Shape {\n  double r;\n  double area() const override { return 3.14159 * r * r; }\n};"
+        }
+      ]
+    },
+    {
+      "id": "dynamic-dispatch-cost",
+      "category": "polymorphism",
+      "front": "What does a virtual call actually cost at runtime, and how do optimisers undo it?",
+      "back": [
+        {
+          "type": "text",
+          "content": "The object carries a pointer to a table of function pointers; the call loads that pointer, indexes it for the right slot, and jumps. That is an indirect call, so the CPU cannot predict the target and a JIT cannot inline it — measurably slower than a direct call, and unpredictable enough to defeat branch prediction. **Devirtualisation** restores the direct call by proving the concrete type: a class the compiler knows cannot be subclassed, or a monomorphised call inside a loop, turns the dispatch back into a jump."
+        },
+        {
+          "type": "code",
+          "language": "java",
+          "caption": "final is the promise that lets the JIT inline the call",
+          "code": "// final means no subclass can exist, so this call site has one target and\n// the JIT can inline it. Remove final and the same site stays indirect.\nfinal class StringList implements Iterable<String> {\n  public String get(int i) { return items.get(i); }\n  private final java.util.List<String> items;\n}"
+        }
+      ]
+    },
+    {
+      "id": "static-vs-dynamic-binding",
+      "category": "polymorphism",
+      "front": "What is the difference between static and dynamic binding, and can a language have both?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Static binding picks the implementation at compile time from the declared types; dynamic binding picks it at run time from the value. Nearly every language mixes them inside one method, which is where the vocabulary gets loose: an overload is bound statically even in a class with virtual methods. 'Statically typed language' describes which types are allowed, not which bindings are static, so the two questions have to be asked separately."
+        },
+        {
+          "type": "code",
+          "language": "cpp",
+          "caption": "one body containing both kinds of binding",
+          "code": "struct Base {\n  virtual void f();\n  void g();\n};\n\nvoid Base::g() {\n  f();   // resolved to Base::f in this object file, then dispatched at\n         // runtime to whatever the dynamic type says\n}"
+        }
+      ]
+    },
+    {
+      "id": "overload-vs-override",
+      "category": "polymorphism",
+      "front": "What is the difference between overloading and overriding, and why does mixing them cause bugs?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Overloading is several functions sharing a name, chosen by argument types, and it has nothing to do with inheritance. Overriding is a derived type replacing an inherited member of the same signature, chosen by the receiver's runtime type. The bug comes from mixing them: an override is reachable dynamically, but an overload is chosen at compile time from the *static* types of the arguments — so a name that overloads in the base can quietly stop dispatching to the override when the argument is typed more widely."
+        },
+        {
+          "type": "code",
+          "language": "cpp",
+          "caption": "override and overload on the same name, in the same class",
+          "code": "struct Base {\n  virtual void f(int);        // a virtual slot, overridable\n  void f(const char*);        // a separate non-virtual overload\n};\n\nstruct Derived : Base {\n  void f(int) override;        // same signature: overrides the virtual\n  void f(double);             // new signature: an overload, not virtual\n};"
+        }
+      ]
+    },
+    {
+      "id": "covariance-contravariance",
+      "category": "polymorphism",
+      "front": "What is the difference between covariance and contravariance?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Covariant if a subtype relationship survives being wrapped: `A <: B` gives `C<A> <: C<B>`, which is what a read-only container is. Contravariant if it survives the other way, giving `C<B> <: C<A>`, which is what a consumer is — a function taking a supertype can stand in wherever a function taking a subtype is needed, because a supertype value is a valid subtype argument. Types that are neither are invariant, and that is exactly why a mutable `List<Dog>` is not a `List<Animal>`."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "a function is contravariant in its parameter",
+          "code": "type Animal = { name: string };\ntype Dog = Animal & { bark(): void };\n\ndeclare function use(f: (a: Animal) => void): void;\ndeclare const dogOnly: (a: Dog) => void;\n\n// Safe: anything expecting to be handed an Animal can be handed a function\n// that copes with a Dog, which is narrower than it needs to be.\nuse(dogOnly);"
+        }
+      ]
+    },
+    {
+      "id": "java-wildcards-pecs",
+      "category": "polymorphism",
+      "front": "Why do Java generics need wildcards at all?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Because Java's `List<T>` is invariant, a `List<Dog>` is not a `List<Animal>`, and any method taking `List<Animal>` is unusable with a `List<Dog>` even though it would be perfectly safe. The wildcard exists so a *parameter* can be given a type more permissive than the parameter itself. PECS names the choice: **producer** extends, **consumer** super. The cost is that `List<? extends Animal>` reads fine but will not accept a `Dog`, so the direction is fixed at the signature."
+        },
+        {
+          "type": "code",
+          "language": "java",
+          "caption": "PECS, and why the direction is not a suggestion",
+          "code": "import java.util.List;\n\n// Producer: you only take Animals out, so the list may hold a narrower type.\nstatic double totalWeight(List<? extends Animal> xs) {\n    return xs.stream().mapToDouble(Animal::weight).sum();\n}\n\n// Consumer: you put Dogs in, so the list must at least accept a Dog.\nstatic void addDog(List<? super Dog> xs) {\n    xs.add(new Dog());\n}\n\n// List<? extends Animal> cannot call add(Dog) -- the element type is sealed\n// to \"some Animal\", which is exactly the promise the caller must keep."
+        }
+      ]
+    },
+    {
+      "id": "nominal-vs-structural-typing",
+      "category": "type-systems",
+      "front": "What is the difference between nominal and structural typing?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Nominal typing says two types are related only if the language was told they are: a class and its subclass are related, and nothing else is. Structural typing says two types are related if they have the same shape, so a local object literal and a declared interface match by having the members, not by sharing a name. Structural typing makes it easy to use data from a boundary, but it also means a type's meaning can change by accident when a member is added, and that unrelated types collapse into each other when they happen to match."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "the declared interface is satisfied, not the named type",
+          "code": "interface User {\n  readonly name: string;\n  readonly age: number;\n}\n\n// Structural: no class, no implements, no subtype relationship. The shape\n// is the whole requirement.\nconst fromJson = JSON.parse('{\"name\":\"Ada\",\"age\":36}') as User;"
+        },
+        {
+          "type": "code",
+          "language": "java",
+          "caption": "nominal: the name is the identity",
+          "code": "final class User {\n  final String name;\n  final int age;\n}\n\n// A different class with the same fields is not a User.\nfinal class UserData { String name; int age; }"
+        }
+      ]
+    },
+    {
+      "id": "type-classes",
+      "category": "type-systems",
+      "front": "What is a type class, and how is it different from an interface the type has to declare?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A type class is a set of operations that a type can be given *separately* from its definition, in any module, so nothing in the type's own declaration mentions it. That is the difference from Java's `Comparable`, which is a supertype the class must claim at definition time. The consequences are that a type can be given an instance for a class it was never written knowing about, that the operations are still checked at compile time, and that a generic function can ask for whatever it needs at the point of use. The price is resolution: someone has to search for the matching instance."
+        },
+        {
+          "type": "code",
+          "language": "haskell",
+          "caption": "instances live outside the type, in any module",
+          "code": "class Container f where\n  empty :: f a\n  insert :: a -> f a -> f a\n\ndata Stack a = Stack [a]\n\n-- Stack never mentions Container. Nothing had to change to add it.\ninstance Container Stack where\n  empty = Stack []\n  insert x (Stack xs) = Stack (x : xs)\n\n-- The constraint is on the use, and sorting works for any Ord.\nsortAll :: Ord a => [a] -> [a]\nsortAll = foldr insert []"
+        },
+        {
+          "type": "code",
+          "language": "java",
+          "caption": "the supertype has to be claimed in the class itself",
+          "code": "// The relationship is part of Stack's definition, which is the ad hoc shape:\nclass Stack<T extends Comparable<T>> { }\n\n// ...and the bound is repeated at every use that needs it.\nstatic <T extends Comparable<T>> void sortAll(List<T> xs) { }"
+        }
+      ]
+    },
+    {
+      "id": "higher-kinded-types",
+      "category": "type-systems",
+      "front": "What are higher-kinded types, and why can TypeScript not express them?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A normal type parameter stands for a type. A higher-kinded one stands for a *type constructor*, something that takes a type and returns a type, so `F<A>` can mean `Array<A>`, `Promise<A>` or `Set<A>` without saying which. You need it to write constraints about the *shape* of a container rather than its elements, which is what a functor or a monad is. TypeScript's type arguments are all of kind `*`, so there is no way to name a variable of kind `* -> *`, and the usual workaround is to drop to an untyped callback."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "F would have to be a type constructor, not a type",
+          "code": "// F is used as if it were a container, but F is a type parameter, so\n// F<A> has kind A rather than (* -> *) -> *. The interface is not\n// expressible in TypeScript; it degrades to a callback.\ninterface Functor {\n  map<A, B>(fa: unknown, f: (a: A) => B): unknown;\n}"
+        },
+        {
+          "type": "code",
+          "language": "haskell",
+          "caption": "f is a variable of kind * -> *",
+          "code": "class Functor f where\n  fmap :: (a -> b) -> f a -> f b\n\n-- f :: (* -> *) -- a type constructor, not a type\nmapMaybe :: Functor f => (a -> Maybe b) -> f a -> f (Maybe b)\nmapMaybe f fa = fmap (fmap f) fa"
+        }
+      ]
+    },
+    {
+      "id": "existential-types",
+      "category": "type-systems",
+      "front": "How do you say 'a value whose type I am hiding' in a type system?",
+      "back": [
+        {
+          "type": "text",
+          "content": "With an existential type, `∃T. T`, which carries a type that is chosen by whoever supplies the value and is unavailable to whoever uses it. Every generic type parameter is universal — one function valid for every `T` — so a type system with only generics has no way to say the opposite, and the value has to be given a name or be widened to an erased top type. The practical consequence is that hiding a type usually costs you the type information, and anything that recovers it is a cast the compiler cannot check."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "a type parameter is universal, so it cannot hide one",
+          "code": "// There is no existential in the type system, so \"some T I do not name\"\n// has to be written as a type parameter -- which claims every T.\nfunction make<T>(): T { return 42 as T; }\n\n// Or widened to an unchecked escape hatch, which is existential but unsound:\ndeclare const hidden: unknown;"
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "caption": "dyn Trait is existential: the type is behind the pointer",
+          "code": "// The concrete type is chosen by the caller and is not nameable here.\nfn draw(shape: &dyn Shape) -> String {\n    format!(\"{}\", shape.label())\n}\n\nfn circle() -> Box<dyn Shape> { Box::new(Circle { r: 2.0 }) }"
+        }
+      ]
+    },
+    {
+      "id": "phantom-types",
+      "category": "type-systems",
+      "front": "What is a phantom type parameter for, given that it carries no value?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It carries no value but still appears in the type, so it is checked without being stored. That lets the type system carry an otherwise-invisible piece of evidence — the unit a measurement is in, the schema version a payload is in, the authenticated state a value has reached. The trick is that the parameter has to appear somewhere in the definition for the compiler to accept it, so languages add a zero-sized marker. The payoff is that mixing the two becomes a compile error instead of a wrong number."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "caption": "no conversion between them, so nothing can be mixed",
+          "code": "use std::marker::PhantomData;\n\nstruct Meters(f64, PhantomData<Meters>);\nstruct Feet(f64, PhantomData<Feet>);\n\nfn sum(a: Meters, b: Meters) -> Meters {\n    Meters(a.0 + b.0, PhantomData)   // adding Feet here is a type error\n}\n\nsum(Meters(1.0, PhantomData), Feet(3.0, PhantomData));  // rejected"
+        }
+      ]
+    },
+    {
+      "id": "type-inference",
+      "category": "type-systems",
+      "front": "What does Hindley-Milner inference actually give you, and where does it stop?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Every expression in the language has a single most general type, computed by unifying the annotated parts, so a type annotation is optional almost everywhere. Two things follow that are easy to miss. Inference is *per binding*: a `let` generalises over all types, but a top-level definition that mentions no arguments cannot be generalised, so the classic `f = id` is monomorphic and the classic `f x = x` is not. And the most general type is often not what you want at the boundary, which is why annotations still matter."
+        },
+        {
+          "type": "code",
+          "language": "haskell",
+          "caption": "the same definition, generalised or not",
+          "code": "f = id                     -- no argument, so no generalisation:\n                                   -- f :: a -> a, and 'a' is now fixed\n\nf x = x                   -- f :: forall a. a -> a, one definition for all types\n\nmain = do\n  let g = id               -- a let-binding generalises\n  print (g 1, g True)      -- (1, True): both fine\n  print (f 1, f True)      -- type error: f's 'a' is already 1"
+        }
+      ]
+    },
+    {
+      "id": "bidirectional-typing",
+      "category": "type-systems",
+      "front": "What is bidirectional typing, and why do practical type checkers use it?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It splits checking into two modes. In *synthesis* mode the checker can produce a type, which is what an expression with an obvious shape gives you. In *checking* mode it needs a type to compare against, which is where annotations matter. Most practical checkers use both and fall back to a mode switch at the point where inference would have to guess. The payoff over pure inference is better errors and usable types for anonymous functions; the cost is that some unannotated expressions genuinely cannot be typed and have to be annotated."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "synthesis finds nothing to work from here",
+          "code": "// No annotation anywhere: there is no constraint to infer x from, so the\n// checker has to fall back to implicit any rather than a guess.\nconst f = x => x + 1;\n\n// An annotation turns the same code into a checking-mode inference,\n// and the error now points at the argument.\nconst g = (x: number) => x + 1;"
+        }
+      ]
+    },
+    {
+      "id": "algebraic-data-types",
+      "category": "type-systems",
+      "front": "What are sum and product types, and why are they not the same as an interface?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A **product** type holds a fixed set of fields at once, which is what a record or an object is. A **sum** type holds exactly one of a fixed set of cases, each with its own fields, which is what a tagged union is. Sum types are the ones a type system can reason about exhaustively: the number of cases is known, so a match that misses one is an error. The common mistake is modelling a sum as a product with optional fields, which admits the states that were supposed to be impossible."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "caption": "an enum is the sum, and the cases can be counted",
+          "code": "enum Shape {\n    Circle { r: f64 },   // product inside the case\n    Rect { w: f64, h: f64 },\n    Empty,               // no fields, and still a distinct value\n}\n\n// Adding a variant breaks every match that does not mention it."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "the same sum, as a discriminated union",
+          "code": "type Shape =\n  | { kind: \"circle\"; r: number }\n  | { kind: \"rect\"; w: number; h: number };\n\n// Not this: it is a product of two optionals, so a Rect with radius\n// undefined is representable, which defeats the point of the sum.\ntype Bad = { kind: \"circle\" | \"rect\"; r?: number; w?: number; h?: number };"
+        }
+      ]
+    },
+    {
+      "id": "union-exhaustiveness",
+      "category": "type-systems",
+      "front": "How do you get a compiler to tell you when a union has grown a case you ignore?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Give the union a discriminant, then end the handling with a branch that assigns the value to `never`, the type with no values. While the cases are covered that assignment is well typed; add a case and the leftover is no longer `never`, so the line stops compiling. This is the one place a TypeScript `never` is worth a `default` branch, because it converts a silent runtime fall-through into a build failure at the definition of the type."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "add a case above and the default stops compiling",
+          "code": "type Shape =\n  | { kind: \"circle\"; r: number }\n  | { kind: \"rect\"; w: number; h: number };\n\nfunction area(s: Shape): number {\n  switch (s.kind) {\n    case \"circle\": return Math.PI * s.r * s.r;\n    case \"rect\": return s.w * s.h;\n    default: {\n      // Whatever is left over is not a Shape any more.\n      const unreachable: never = s;\n      return unreachable;\n    }\n  }\n}"
+        }
+      ]
+    },
+    {
+      "id": "pattern-matching-exhaustive",
+      "category": "type-systems",
+      "front": "What makes a `match` exhaustive, and what quietly stops it being checked?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A match is exhaustive when it covers every constructor the type can hold, which is checkable precisely because a sum type has a known, finite case set. Two things break the check without warning: a catch-all wildcard, and a guard — a match arm with a condition does not count as covering its case, so the case is still reported missing even though a runtime value will usually reach it. The check is worth the effort because it is the one place the compiler can tell you a new variant is unhandled, rather than that a value is null."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "caption": "delete the Empty arm and the compiler says so",
+          "code": "fn area(s: Shape) -> f64 {\n    match s {\n        Shape::Circle { r } => std::f64::consts::PI * r * r,\n        Shape::Rect { w, h } => w * h,\n        Shape::Empty => 0.0,\n    }\n    // Remove the Empty arm and this is a non-exhaustive match error.\n}"
+        },
+        {
+          "type": "code",
+          "language": "ocaml",
+          "caption": "a guard does not count as covering the case",
+          "code": "let sign n =\n  match n with\n  | n when n > 0 -> 1     // guarded arm: n is still reported uncovered\n  | 0 -> 0               // the literal does cover 0\n  | _ -> -1\n(* The compiler still asks about n > 0, because a guard is a filter. *)"
+        }
+      ]
+    },
+    {
+      "id": "parametricity-theorem",
+      "category": "type-systems",
+      "front": "What is the parametricity theorem, and what does it let you prove without running anything?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It says a polymorphic function is *relation preserving*: if two arguments stand in some relation before the call, the results stand in the same relation after. The practical consequence is that relations can be chosen for their consequences rather than for what they mean, which yields the *free theorems* — identities that hold for every such function, derivable from its type alone. It is the reason `fmap` must respect composition, and the reason a polymorphic function cannot smuggle in a type-dependent trick."
+        },
+        {
+          "type": "code",
+          "language": "haskell",
+          "caption": "identities that hold for every Functor instance",
+          "code": "-- Whatever fmap is, these hold. They come from the type, not the body:\nfmap id     == id\nfmap (f . g) == f . fmap g\n\n-- fmap f . fmap g = fmap (f . g) is a law every instance must obey,\n-- so a lawful instance can be tested without knowing the type inside."
+        }
+      ]
+    },
+    {
+      "id": "gradual-typing",
+      "category": "type-systems",
+      "front": "What is gradual typing, and what is the difference between `any` and `unknown`?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Gradual typing is about a language that mixes typed and untyped code, and about where the guarantee stops. `any` puts the boundary *before* the value: it is usable anywhere without a check, so the first untyped call can hand a string to code that treats it as a number, and nothing complains at any of those steps. `unknown` puts the boundary on the other side — the value is genuinely untrusted, and the only thing you may do is narrow it to a real type first. One is an unchecked exit from the type system, the other is an entry point into it."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "any skips the check, unknown demands one",
+          "code": "declare const fromTheDom: any;\nfromTheDom.whatever().deeply.nested(1, 2, 3);  // no complaint, ever\n\ndeclare const maybe: unknown;\nmaybe.toFixed();     // error: 'maybe' is of type 'unknown'\nif (typeof maybe === \"number\") maybe.toFixed();   // narrowed, now fine"
+        }
+      ]
+    },
+    {
+      "id": "type-soundness",
+      "category": "type-systems",
+      "front": "What is type soundness, and what is a hole in a type system?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Soundness is the claim that a well-typed program cannot be observed to be doing the wrong thing at run time, and for a language with step-by-step reduction it decomposes into two properties: evaluation never gets stuck on a well-typed term, and a well-typed step preserves the types. Practically it means the type error you were trying to prevent cannot arrive by another route. Every language has deliberate holes — casts, `any`, unchecked array access, integer overflow — and a hole is a promise that a particular line is correct, which makes it worth keeping few, visible and tested."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "the same mistake, checked and unchecked",
+          "code": "// Unchecked, and stated as such: the boundary is a documented promise.\nconst el = document.querySelector(\"#app\") as HTMLDivElement;\nel.innerHTML = untrusted;   // fine if you checked el exists; a hole if not\n\n// Checked, and the failure is a runtime error rather than a silent one.\nconst maybe = document.querySelector(\"#missing\");\nmaybe.innerHTML = \"x\";       // error: possibly null"
+        }
+      ]
+    },
+    {
+      "id": "dependent-types",
+      "category": "type-systems",
+      "front": "What is a dependent type, and what can a type checker prove with one?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A type that is allowed to mention values, so `Vec 3 Int` and `Vec 4 Int` are different types and appending a vector of length `n` to one of length `m` returns a vector of length `n + m`. Once the type can talk about values, arithmetic inside types becomes checkable, and the checker stops being a checker and becomes a theorem prover: some programs have proofs as their types, and a program that type checks cannot go wrong at run time. The cost is that the checker has to decide arithmetic, so it gets slower and it needs help from the user on the steps it cannot do automatically."
+        },
+        {
+          "type": "code",
+          "language": "haskell",
+          "caption": "the length is in the type, so the return type is computed",
+          "code": "data Vec (n :: Nat) a where\n  Nil  :: Vec 'Z a\n  Cons :: a -> Vec n a -> Vec ('S n) a\n\n-- The result type is n + m. Getting it wrong is a type error, not a\n-- runtime length mismatch.\nappend :: Vec n a -> Vec m a -> Vec (n + m) a\nappend Nil ys = ys\nappend (Cons x xs) ys = Cons x (append xs ys)"
+        }
+      ]
+    },
+    {
+      "id": "double-dispatch",
+      "category": "language-design",
+      "front": "What is double dispatch, and what is it actually for?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Single dispatch lets the receiver choose the implementation. Double dispatch adds a second call in which the *argument* chooses one: the receiver's method takes the argument and calls back into it. The trick's purpose is to make the visitor pattern possible without a `switch`. With single dispatch you can add a new operation — a new visitor interface — without touching the types, but every visitor still needs a `switch` over the shapes, and a new shape breaks all of them. With double dispatch the switch moves to the dispatch table the language maintains, so adding a shape does not touch the operations."
+        },
+        {
+          "type": "code",
+          "language": "typescript",
+          "caption": "the two calls in sequence are the dispatch",
+          "code": "abstract class Expr {\n  // The receiver is entered first, then hands off to the argument.\n  abstract accept(v: Visitor): number;\n}\n\nclass Lit implements Expr {\n  constructor(private n: number) {}\n  accept(v: Visitor): number { return v.visitLit(this); }\n}\n\nclass Add implements Expr {\n  constructor(private l: Expr, private r: Expr) {}\n  accept(v: Visitor): number { return v.visitAdd(this); }\n}\n\n// A new operation is a new Visitor, and no Expr changes. A new Expr is a\n// new class implementing Expr -- and it forces every Visitor to gain a\n// method, which TypeScript will report as missing."
+        }
+      ]
+    },
+    {
+      "id": "multiple-dispatch",
+      "category": "language-design",
+      "front": "What is multiple dispatch, and what problem does single dispatch have with it?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Multiple dispatch chooses the implementation from the types of *all* the arguments rather than just the first. Single dispatch has no answer for an expression that genuinely needs both operands: in most languages `\"abc\" + 1` is resolved by coercing one side or by declaring the operator only on some types, which means the language has to pick a winner for a question the programmer already answered. Multiple dispatch declines to pick — the call either matches a method or there is no applicable method. The cost is that resolution now depends on a set of types rather than one, so the search is more expensive and overload sets interact."
+        },
+        {
+          "type": "code",
+          "language": "julia",
+          "caption": "no winner is picked; either a method matches or it does not",
+          "code": "# Dispatch on the types of all three arguments.\nf(x::Int,    y::Int,    z::Int)    = x + y + z\nf(x::String, y::String, z::String) = string(x, y, z)\nf(x::String, y::Int,    z::Int)    = repeat(x, y + z)\n\nf(1, 2, 3)            # 6\nf(\"ab\", \"cd\", \"ef\")   # \"abcdef\"\nf(\"ab\", 1, 2)         # \"abab\"\nf(1, \"ab\", 2)         # MethodError: no method matching f(::Int, ::String, ::Int)"
+        }
+      ]
+    },
+    {
+      "id": "predicate-dispatch",
+      "category": "language-design",
+      "front": "What is predicate dispatch, and how does it answer ad hoc polymorphism?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Instead of a table keyed by a single declared type, the choice is made at the call site by asking the values what they are. It is the dynamic-language answer to the same problem overloads solve statically, and it composes with ad hoc polymorphism: one body can accept any value that satisfies one of several runtime shapes, including types that did not exist when the function was written. What you give up is the check happening before the run, so a mismatch surfaces as a failed predicate at run time rather than as a compile error — the branch that was supposed to handle a case simply has to be there."
+        },
+        {
+          "type": "code",
+          "language": "javascript",
+          "caption": "the table is runtime values, chosen per call",
+          "code": "// One function, four unrelated types, and the choice is made from the\n// arguments. This is the ad hoc family without the overload set.\nfunction add(a, b) {\n  if (Number.isInteger(a) && Number.isInteger(b)) return a + b;\n  if (typeof a === \"string\" && typeof b === \"string\") return a + b;\n  if (Array.isArray(a) && Array.isArray(b)) return [...a, ...b];\n  return NotImplemented;          // not an error, a value: the caller decides\n}\n\nadd(1, 2);                      // 3\nadd(new Date(), new Date());    // 0 -- neither branch ran, and it still\n                                // returned something the caller must handle"
+        }
+      ]
+    },
+    {
+      "id": "method-resolution-order",
+      "category": "language-design",
+      "front": "How does a language decide which inherited method wins when several apply?",
+      "back": [
+        {
+          "type": "text",
+          "content": "It computes a single linear order over the class and its bases, so method lookup is 'the first match in this list' and a diamond has exactly one answer. A naive left-to-right depth-first order gets diamonds wrong — it can list a base before a more derived class that overrides it, so the override is never reached. C3 linearisation is the fix: it computes the order by taking the most derived candidate that appears nowhere earlier in any other parent's linearisation. Not every hierarchy admits one, and a language that requires it will refuse to define the class rather than pick arbitrarily."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "D, B, C, A: C is there because C3 put it there",
+          "code": "class A: pass\nclass B(A): pass\nclass C(A): pass\nclass D(B, C): pass\n\nD.__mro__   # (D, B, C, A, object)\n\n# Order B before C, and C is a subclass of A, so A has to come after C.\nclass E(C, B): pass\n# TypeError: Cannot create a consistent method resolution order\n# (MRO) for bases C, B -- the constraints cannot all be satisfied."
+        }
+      ]
+    },
+    {
+      "id": "multiple-inheritance",
+      "category": "language-design",
+      "front": "Why is multiple inheritance hard, and what does the diamond actually leave ambiguous?",
+      "back": [
+        {
+          "type": "text",
+          "content": "With one base class there is exactly one inherited field for any name, so a field is a single slot. With two bases that share an ancestor, a name inherited through both paths can be two distinct fields, and the language has to invent an answer for which one a field access reads. The other half is the initialisation order, where the shared ancestor may run twice and produce a partially constructed object. Languages split on the fix: Java allows multiple interface inheritance only, since interfaces carry no state to disagree about, and C++ allows stateful multiple inheritance and pushes the discipline onto `super`."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "cooperative super() runs the shared base once",
+          "code": "class Base:\n    def __init__(self):\n        self.value = 0\n        print(\"Base.__init__\")\n\nclass Left(Base):\n    def __init__(self):\n        super().__init__()\n        self.left = True\n\nclass Right(Base):\n    def __init__(self):\n        super().__init__()\n        self.right = True\n\nclass Both(Left, Right):\n    def __init__(self):\n        super().__init__()\n\nBoth()   # Base.__init__ once. Without super(), it would run twice."
+        }
+      ]
+    },
+    {
+      "id": "mixins",
+      "category": "language-design",
+      "front": "What is the mixin pattern, and how is it different from inheriting from a base class?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A mixin is a class that contributes behaviour and expects no state and no initialisation of its own, so it carries no obligation for the class that uses it to be a kind of it. What makes it a pattern rather than a keyword is the requirement that it cooperate: it must call `super()` so the rest of the chain still runs, and its methods must work without knowing what comes next in the linearisation. That is why order matters when you list them, and why a mixin that stores fields is a design mistake even if it compiles."
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "no state, calls super(), and is listed first",
+          "code": "import json\n\nclass JsonMixin:\n    # No __init__, no fields: it adds a method and nothing else.\n    def to_json(self) -> str:\n        return json.dumps(self.__dict__, default=str)\n\n    def __radd__(self, other):        # cooperating with the chain\n        return other.to_json()\n\nclass ORM:\n    def save(self) -> None: ...\n\nclass User(JsonMixin, ORM):           # mixin first: its methods win\n    def __init__(self, name: str):\n        self.name = name\n        ORM.__init__(self)\n\n    def __str__(self) -> str:\n        return f\"<User {self.name}>\"\n\nstr(User(\"Ada\"))   # __radd__ from the mixin, not TypeError"
+        }
+      ]
+    },
+    {
+      "id": "closure-capture",
+      "category": "language-design",
+      "front": "What does a closure capture — a value or a binding?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A binding, and the difference is only visible when the value is reassigned. Capturing a binding means every closure over it sees the current value, so a loop that reuses one binding hands out closures that all read the final value. Languages that create a fresh binding per iteration turn the same loop into the behaviour people expect. This is why the two loop forms in the snippet below differ, and why the same trap turns up again in callbacks registered in a loop."
+        },
+        {
+          "type": "code",
+          "language": "javascript",
+          "caption": "one shared binding versus one binding per iteration",
+          "code": "for (var i = 0; i < 3; i++) setTimeout(() => console.log(i));\n// 3 3 3  -- one binding for the whole function, all closures read the end state\n\nfor (let i = 0; i < 3; i++) setTimeout(() => console.log(i));\n// 0 1 2  -- a fresh binding per iteration, so each closure has its own\n\nvar fns = [];\nfor (let i = 0; i < 3; i++) fns.push(() => i);\nfns.map((f) => f());   // [0, 1, 2]\nfns[0]();             // still 0: each binding is independent"
+        }
+      ]
+    },
+    {
+      "id": "evaluation-strategies",
+      "category": "language-design",
+      "front": "What are the evaluation strategies, and what does laziness actually buy?",
+      "back": [
+        {
+          "type": "text",
+          "content": "They differ in *when* an argument is evaluated and *how often*. Strict evaluation evaluates before the call, so an unused argument still costs something. Call-by-name evaluates inside the body each time it is reached, so an argument used twice is computed twice. Call-by-need memoises, evaluating at most once and sharing the result, which is what Haskell and OCaml do. Laziness is what makes an infinite list and an infinite structure type-check, and it moves the cost of a computation to the place that first needs a value rather than the place that names it."
+        },
+        {
+          "type": "code",
+          "language": "haskell",
+          "caption": "the same body, evaluated differently",
+          "code": "-- Lazy, and shared: 2 is evaluated once, then reused.\ndouble :: Int -> Int\ndouble x = x + x\n\n-- Strict: the argument is evaluated before the body runs.\ndoubleStrict :: Int -> Int\ndoubleStrict x = x + x\n\n-- Lazy: undefined is never forced, so this is 0 rather than an error.\nlazyZero = double 0 + (undefined :: Int)"
+        },
+        {
+          "type": "code",
+          "language": "python",
+          "caption": "call-by-name would recompute; generators give you call-by-need",
+          "code": "def call_by_name(f, x):\n    return f(x) + f(x)        # f(x) is evaluated twice, if f is not shared\n\n# An iterable is lazy, and itertools caches: evaluated at most once each.\nfrom itertools import tee\na, b = tee(range(3), 2)        # two independent passes over one source\nlist(a), list(b)               # [0,1,2], [0,1,2]"
+        }
+      ]
+    },
+    {
+      "id": "tail-calls-trampolines",
+      "category": "language-design",
+      "front": "Do tail calls get optimised away, and what do you do when the language says no?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A proper tail call reuses the caller's frame, so recursion in tail position runs in constant stack depth. Some languages guarantee it — a Scheme is required to, and that is what makes tail recursion the normal way to write loops there — and others do not: JavaScript's specification never requires it, so a deep recursion works in one engine and throws a `RangeError` in another. The portable answer is a trampoline: the recursive step returns the next step as a value and a loop runs it, so the depth is bounded by the heap and the behaviour is the same everywhere."
+        },
+        {
+          "type": "code",
+          "language": "javascript",
+          "caption": "constant stack depth, no reliance on the engine",
+          "code": "// Each step returns the *next step* as a value. Nothing is nested, so\n// stack depth is constant and the depth limit is not the stack.\nconst next = (n, acc = 0) => (n === 0 ? acc : () => next(n - 1, acc + 1));\n\nfunction trampoline(step) {\n  let s = step;\n  while (typeof s === \"function\") s = s();\n  return s;\n}\n\ntrampoline(next(1e7));   // fine, where count(1e7) would throw a RangeError"
+        }
+      ]
+    },
+    {
+      "id": "iterator-protocol",
+      "category": "language-design",
+      "front": "What does an iterator really have to provide, and why does it need a `return`?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Only `next`, returning either a value or a done marker — that is the whole traversal protocol, and `for..of` desugars to it. The part that is easy to forget is the second, optional method: `return`, called when a loop exits early. Without it, abandoning an iterator that holds a file handle or a socket has no way to release it, because the protocol has no way to say 'I am done with you'. That is also why a generator, which gets `return` for free, is usually the right way to write one."
+        },
+        {
+          "type": "code",
+          "language": "javascript",
+          "caption": "next drives the loop, return cleans up the early exit",
+          "code": "function* countTo(n) {\n  for (let i = 0; i < n; i++) yield i;\n  // yield's finally blocks run when the loop breaks out early\n}\n\nfor (const i of countTo(1e6)) {\n  if (i === 3) break;    // the generator's cleanup still runs\n}\n\n// Hand-written, the same protocol plus the part that makes break safe.\nfunction fileLines(text) {\n  const lines = text.split(\"\\n\");\n  let i = 0;\n  return {\n    next: () => (i < lines.length ? { value: lines[i++], done: false } : { done: true }),\n    return: () => { i = lines.length; return { done: true }; },\n    [Symbol.iterator]() { return this; },\n  };\n}"
+        }
+      ]
+    },
+    {
+      "id": "exceptions-vs-result",
+      "category": "language-design",
+      "front": "Should a failure be an exception or a value, and how do you decide?",
+      "back": [
+        {
+          "type": "text",
+          "content": "An exception is invisible in the signature and can be raised from anywhere, so it is right for the failures that are not part of what the function does and that the caller genuinely cannot do anything about. A result value is in the type, so every caller has to deal with it, and it composes with `match`, `?` and short-circuiting. The practical split is expected failure versus bug: a parse error or a missing key is a value, an index out of range or a null reference is a panic, and a function that returns `Result` should never also have a failure path that escapes as an exception."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "caption": "the expected failure is in the signature, the bug panics",
+          "code": "use std::num::ParseIntError;\n\n// Expected failure: the caller must handle it, and it composes.\nfn parse_port(s: &str) -> Result<u16, ParseIntError> {\n    s.parse()\n}\n\n// The call site decides: ? propagates, unwrap turns it into a panic.\nlet port = parse_port(\"8080\").unwrap();\nlet host = match parse_port(\"8080\") { Ok(p) => p, Err(e) => return Err(e.into()) };"
+        }
+      ]
+    },
+    {
+      "id": "ownership-borrowing",
+      "category": "language-design",
+      "front": "What do ownership and borrowing buy you, and what are the rules?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Every value has one owner, and using a value moves the ownership, so the compiler can prove that nothing is used after it has gone. Borrowing is the exception: a reference is either shared, meaning many readers and no writers, or exclusive, meaning one writer and no other borrows at all. Because the kind of reference is in the type, the two kinds cannot be held at once, which is why a data race is not a runtime check in Rust but a rejected program. The discipline is real ownership held at compile time, at the cost of lifetimes in signatures that the compiler usually infers."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "caption": "moved, shared, exclusive: the three states",
+          "code": "let s = String::from(\"hello\");\nlet t = s;                 // moved: s is unusable from here on\n// println!(\"{s}\");       // error: borrow of moved value: s\n\nlet owned = String::from(\"hello\");\nlet reader = &owned;       // shared: many of these, no writers\nlet writer = &mut owned;   // exclusive: one of these, and no readers\n// println!(\"{reader}\");  // error: cannot borrow as shared while mutably\n                          // borrowed\n\nprintln!(\"{reader}\");      // fine once the exclusive borrow is done"
+        }
+      ]
+    },
+    {
+      "id": "message-passing-actors",
+      "category": "language-design",
+      "front": "What is the actor model, and what is it trading away for removing shared state?",
+      "back": [
+        {
+          "type": "text",
+          "content": "An actor owns its state, runs on its own thread, and communicates only by sending messages to a mailbox that nobody else can read. Because no two actors touch the same memory, there are no locks, no lock ordering, and no data races to reason about, and the data is not copied between them. What you pay is that the answer is a value and the ordering is whatever the sender chose, so concurrency bugs move from the shared-state kind to the message-protocol kind. It is a good fit when the units of work are independent and a bad fit when the work genuinely shares a cache."
+        },
+        {
+          "type": "code",
+          "language": "erlang",
+          "caption": "the mailbox is the only thing shared, and it is per-actor",
+          "code": "handle_request(State) ->\n    receive\n        {get, From} ->\n            From ! {reply, State},\n            handle_request(State);\n        {put, New} ->\n            handle_request(New)      % no locks, because no sharing\n    end.\n\n%% The ordering guarantee is the message order in one mailbox:\n%% a process's own messages are delivered in the order it sent them."
+        }
+      ]
+    },
+    {
+      "id": "continuations",
+      "category": "language-design",
+      "front": "What is a continuation, and why does it show up everywhere?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A continuation is the function representing everything that happens after a call — what the program does with the result. A direct-style call has that work written around the call, in the middle, so a library cannot change or postpone it. Continuation-passing style makes every call take a function instead, which puts the whole program in a chain where nothing sits in the middle of anything. That is what makes early exit, coroutines, exceptions and generators expressible without special syntax, and it is also the shape of a callback, a promise handler and a `then`."
+        },
+        {
+          "type": "code",
+          "language": "haskell",
+          "caption": "the same program, direct and in continuation-passing style",
+          "code": "-- Direct: the work before and after the call is around it.\nmain :: IO ()\nmain = do\n  line <- getLine\n  putStrLn (\"you typed: \" ++ line)\n\n-- Continuation-passing: the whole thing is a function of a function, and\n-- the call is the last thing it does.\nmain' :: String -> (String -> IO ()) -> IO ()\nmain' line k = k (\"you typed: \" ++ line)\n\n-- The reason this matters: k' below can be called now, later, twice,\n-- or never, and the caller above cannot tell the difference."
         }
       ]
     }

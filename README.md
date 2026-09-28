@@ -16,15 +16,17 @@ static bundle, so it deploys to Cloudflare Pages with no server or worker.
 - **Code snippets** — highlighted by [Shiki](https://shiki.style) using VS
   Code's grammars, precomputed during the build. No highlighter is shipped to
   the browser, and every snippet gets a copy button.
-- **Progress tracking** — a stacked bar of got-it / missed / unvisited counts,
-  persisted to `localStorage` so a reload resumes the session.
+- **Progress tracking** — a stacked bar of got-it / missed / unvisited counts.
+  The grades, the cursor and your category choices are persisted to
+  `localStorage`; the shuffle order is not, so a reload keeps what you learned
+  but deals a new order.
 - **Known cards retire** — a card graded `got it` leaves the deck, so the deck
   is always exactly what you have not got right yet. `missed` cards stay in, and
   the counter shrinks as you work through it.
-- **Shuffled, and de-clustered** — the deck is dealt in a random order that stays
-  fixed for the session, then spread so two cards from the same subject rarely
-  land back to back. A plain shuffle of this deck still averages about nine
-  adjacent same-category pairs out of 57; spreading cuts that to well under one.
+- **Shuffled, and de-clustered** — the deck is dealt in a random order, spread so
+  two cards from the same subject rarely land back to back. A plain shuffle of
+  this deck still averages about nine adjacent same-category pairs out of 103;
+  spreading cuts that to 0.15, and 88% of sessions get none at all.
 - **Settings page** — switch whole categories in and out of the deck. Progress on
   a hidden category is kept and reported, so turning one back on shows how far it
   had got. Categories are stored as a deny-list, so a new category added to
@@ -194,20 +196,28 @@ the same flow through the real DOM.
 
 ## Notes on a couple of decisions
 
-**Why the order is seeded rather than random per render.** The cursor is an index
-into the queue, so an order that reshuffled on every render would point at a
-different card each time and make the stored cursor meaningless. A seed in
-`localStorage` gives a fresh order per session that survives a reload. The same
-seed always produces the same order, which is also what makes the shuffle
-testable without stubbing `Math.random`.
+**Why the order is seeded rather than random per render.** The queue is re-derived
+from the seed on every read, and the cursor is an index into it, so an order that
+changed on every render would move the card out from under the cursor. The seed
+is drawn once on load and held in state, which makes the order stable for the
+session and keeps the shuffle testable without stubbing `Math.random`.
+
+**Why the seed is not persisted.** Storing it bought one thing: a reload resumed
+the same sequence. It also meant a refresh silently continued where you left off
+rather than starting a new pass, and it coupled the shuffle to the storage
+schema — `saveStudy` had to know to leave a field out, or a future refactor
+writing the whole state would quietly reinstate the old behaviour. The order is
+now re-drawn on every load, so a refresh deals a new one and only the grades,
+the cursor and the category choices carry over. The cursor still means something
+because the queue it indexes no longer holds the cards you have got it.
 
 **Why the storage key is still `v1`.** The payload has changed shape more than
 once — the missed-only filter came and went, then `seed` and `hidden` were
-added — but `loadStudy` reads each field defensively and defaults whatever is
-missing or malformed, so an older session still restores. Bumping the key would
-discard real progress to buy nothing. A session saved before the seed existed
-comes back in a new random order, which is a reasonable thing to happen the first
-time the new build runs.
+added, then `seed` was dropped again — but `loadStudy` reads each field
+defensively and defaults whatever is missing or malformed, so an older session
+still restores. Bumping the key would discard real progress to buy nothing. The
+one change a stored payload could notice was dropping `seed`, and it needed no
+bump: a stale seed in storage is ignored and the order is re-drawn.
 
 **Why the study view is capped at one screen but the settings view is not.** The
 page was `min-h-dvh`, so it grew to whatever the card needed: the answer face

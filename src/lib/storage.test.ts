@@ -73,14 +73,46 @@ describe("loadStudy", () => {
       hidden: ["y"],
     };
     saveStudy(state);
-    expect(loadStudy(DECK)).toEqual(state);
+    const loaded = loadStudy(DECK);
+    // The seed is the one field that does not come back: it is re-drawn, so
+    // every load deals a new order. Everything else is restored verbatim.
+    expect(loaded.answers).toEqual(state.answers);
+    expect(loaded.cursor).toBe(state.cursor);
+    expect(loaded.hidden).toEqual(state.hidden);
   });
 
-  it("restores the same shuffle order after a reload", () => {
-    // The seed is what makes the queue stable across visits; without it the
-    // cursor would point at a different card every time.
-    saveStudy({ answers: {}, cursor: 2, seed: 4242, hidden: [] });
-    expect(loadStudy(DECK).seed).toBe(4242);
+  it("leaves the seed out of the stored payload", () => {
+    // Asserted on the payload rather than on loadStudy, because this is what
+    // makes the shuffle survive a future refactor of the loader: as long as the
+    // seed is not written, a reload cannot resume the old order.
+    saveStudy({ answers: {}, cursor: 3, seed: 4242, hidden: [] });
+    const payload: unknown = JSON.parse(storage.getItem(KEY) as string);
+    expect(Object.keys(payload as object).sort()).toEqual([
+      "answers",
+      "cursor",
+      "hidden",
+    ]);
+  });
+
+  it("does not resume the previous order after a reload", () => {
+    // The behaviour the user asked for: a refresh is a new shuffle, not a
+    // continuation of the last one. Only the grades carry over.
+    const saved: StudyState = {
+      answers: { a: "got-it" },
+      cursor: 0,
+      seed: 4242,
+      hidden: [],
+    };
+    saveStudy(saved);
+    // Two loads from the same stored payload, as two page loads would be.
+    // Neither gets the seed that was written.
+    const first = loadStudy(DECK);
+    const second = loadStudy(DECK);
+    expect(first.seed).not.toBe(4242);
+    expect(second.seed).not.toBe(4242);
+    // The grade is what carried over.
+    expect(first.answers).toEqual({ a: "got-it" });
+    expect(second.answers).toEqual({ a: "got-it" });
   });
 
   it("falls back to a fresh session on malformed JSON", () => {
@@ -126,10 +158,12 @@ describe("loadStudy", () => {
     }
   });
 
-  it("draws a fresh seed when the stored one is unusable", () => {
-    // A constant fallback would make every such session come back in the same
-    // order, which is the one thing the shuffle exists to prevent.
-    for (const seed of [-1, 1.5, NaN, "7", null, undefined]) {
+  it("draws a new shuffle on every load, ignoring any stored seed", () => {
+    // The order is deliberately not persisted, so a refresh deals a new one
+    // rather than resuming the old sequence. A stale seed left in an older
+    // payload must not bring the old order back.
+    const seen = new Set<number>();
+    for (const seed of [0, 1, 4242, -1, 1.5, "7", null, undefined]) {
       storage.setItem(
         KEY,
         JSON.stringify({ answers: {}, cursor: 0, seed, hidden: [] }),
@@ -137,7 +171,12 @@ describe("loadStudy", () => {
       const loaded = loadStudy(DECK);
       expect(Number.isInteger(loaded.seed)).toBe(true);
       expect(loaded.seed).toBeGreaterThanOrEqual(0);
+      seen.add(loaded.seed);
     }
+    // Independent draws, so at least some of the eight differ. A constant
+    // fallback would make every load come back in the same order, which is the
+    // one thing the shuffle exists to prevent.
+    expect(seen.size).toBeGreaterThan(1);
   });
 
   it("keeps only hidden categories the deck still has", () => {

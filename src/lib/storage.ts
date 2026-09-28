@@ -7,7 +7,7 @@
  * because losing progress is recoverable and a blank screen is not.
  */
 
-import { isSeed, newSeed } from "./shuffle";
+import { newSeed } from "./shuffle";
 import {
   initialStudyState,
   isAnswer,
@@ -19,13 +19,14 @@ import {
  * Bump the suffix when a change makes older payloads unreadable.
  *
  * The version has stayed at v1 through several shape changes -- the missed-only
- * filter came and went, `seed` and `hidden` were added -- because
- * {@link loadStudy} reads each field defensively and defaults whatever is
- * missing or malformed. A v1 payload still restores a full session, and bumping
- * would throw away real progress for nothing. What an older payload does *not*
- * restore is the shuffle order: a session saved before `seed` existed comes
- * back in a new random order, which is a reasonable thing to happen on a first
- * run of the new build.
+ * filter came and went, `seed` and `hidden` were added, `seed` was dropped
+ * again -- because {@link loadStudy} reads each field defensively and defaults
+ * whatever is missing or malformed. A v1 payload still restores a full session,
+ * and bumping would throw away real progress for nothing.
+ *
+ * Dropping `seed` was the one change that a stored payload could notice, and it
+ * needed no version bump: a stale seed in storage is simply ignored, and the
+ * order is re-drawn.
  */
 const STORAGE_KEY = "flashcards:study:v1";
 
@@ -107,21 +108,29 @@ export function loadStudy(deck: DeckIndex): StudyState {
   return {
     answers,
     cursor,
-    // A payload from before the shuffle, or a corrupted one, gets a fresh seed
-    // rather than a fixed default: a constant seed would make every such
-    // session come back in the same order, which is the thing the shuffle
-    // exists to prevent.
-    seed: isSeed(parsed.seed) ? parsed.seed : newSeed(),
+    // Always a fresh seed: the shuffle is re-drawn on every load, so a reload
+    // starts a new order rather than resuming the old one. A payload that used
+    // to carry a seed is simply no longer read.
+    seed: newSeed(),
     hidden: readHidden(parsed.hidden, deck),
   };
 }
 
-/** Persists the session. Silently gives up if storage is full or blocked. */
+/**
+ * Persists the session. Silently gives up if storage is full or blocked.
+ *
+ * The seed is deliberately left out. The order is derived from it, so storing
+ * it is what made a reload resume the same sequence; without it every load
+ * deals a new one. The grades, the cursor and the category choices are the
+ * part worth keeping, and the cursor still means something because the queue
+ * it indexes no longer contains the cards already got it.
+ */
 export function saveStudy(state: StudyState): void {
   const store = storage();
   if (!store) return;
   try {
-    store.setItem(STORAGE_KEY, JSON.stringify(state));
+    const { answers, cursor, hidden } = state;
+    store.setItem(STORAGE_KEY, JSON.stringify({ answers, cursor, hidden }));
   } catch {
     // Quota exceeded or private-mode restriction; progress is best-effort.
   }

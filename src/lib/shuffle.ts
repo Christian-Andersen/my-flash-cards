@@ -5,9 +5,11 @@
  * deck cannot be answered by muscle memory of the file. Two things make the
  * order *good* rather than merely random:
  *
- * - It is seeded from the session, so the order is stable for the life of that
- *   session and survives a reload. A cursor into an order that reshuffles on
- *   every render would point at a different card each time.
+ * - It is seeded, so the order is stable for the life of a session. The seed is
+ *   drawn on load and not persisted, so every page load deals a new order, but
+ *   the order does not move under the cursor while you are looking at it.
+ *   A cursor into an order that reshuffles on every render would point at a
+ *   different card each time.
  * - Cards are spread apart by category, so a run of consecutive questions is
  *   not a run of consecutive subjects. Clustering is what makes a shuffled deck
  *   feel like the same deck with the numbers changed.
@@ -44,17 +46,13 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** True for a value {@link mulberry32} can be driven from. */
-export function isSeed(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= 0;
-}
-
 /**
  * A fresh seed, or `0` when the platform has no CSPRNG.
  *
- * Collapsing to `0` rather than throwing keeps a session usable in an
- * environment without `crypto`; the deck is still shuffled, just the same way
- * every time.
+ * Drawn once per page load and not stored, so it only has to be good for the
+ * life of one session. Collapsing to `0` rather than throwing keeps the app
+ * usable in an environment without `crypto`; the deck is still shuffled, just
+ * the same way every time.
  */
 export function newSeed(): number {
   const values = new Uint32Array(1);

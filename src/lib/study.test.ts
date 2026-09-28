@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   deckOrder,
-  isSeed,
   newSeed,
   spreadCategories,
   shuffleWithSeed,
@@ -195,21 +194,17 @@ describe("deckOrder", () => {
   });
 });
 
-describe("isSeed", () => {
-  it("accepts non-negative integers only", () => {
-    expect(isSeed(0)).toBe(true);
-    expect(isSeed(4_294_967_295)).toBe(true);
-    for (const value of [-1, 1.5, NaN, "7", null, undefined]) {
-      expect(isSeed(value)).toBe(false);
-    }
-  });
-});
-
 describe("newSeed", () => {
   it("produces varied non-negative integers", () => {
     const seeds = new Set(Array.from({ length: 50 }, () => newSeed()));
     expect(seeds.size).toBeGreaterThan(40);
-    for (const seed of seeds) expect(isSeed(seed)).toBe(true);
+    // mulberry32 coerces with >>> 0, so anything within the uint32 range is a
+    // usable seed and no value is out of range.
+    for (const seed of seeds) {
+      expect(Number.isInteger(seed)).toBe(true);
+      expect(seed).toBeGreaterThanOrEqual(0);
+      expect(seed).toBeLessThanOrEqual(4_294_967_295);
+    }
   });
 });
 
