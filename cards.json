@@ -2050,6 +2050,352 @@
           "code": "-- Direct: the work before and after the call is around it.\nmain :: IO ()\nmain = do\n  line <- getLine\n  putStrLn (\"you typed: \" ++ line)\n\n-- Continuation-passing: the whole thing is a function of a function, and\n-- the call is the last thing it does.\nmain' :: String -> (String -> IO ()) -> IO ()\nmain' line k = k (\"you typed: \" ++ line)\n\n-- The reason this matters: k' below can be called now, later, twice,\n-- or never, and the caller above cannot tell the difference."
         }
       ]
+    },
+    {
+      "id": "sql-where-having",
+      "category": "databases",
+      "front": "What is the difference between WHERE and HAVING?",
+      "back": [
+        {
+          "type": "text",
+          "content": "WHERE filters individual rows before grouping, so it cannot use aggregates. HAVING filters groups after GROUP BY has run, so it can. Use both when you need to narrow the rows first and then keep only the groups that qualify."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT department, AVG(salary) AS avg_pay\nFROM employees\nWHERE hired > '2020-01-01'\nGROUP BY department\nHAVING AVG(salary) > 80000;",
+          "caption": "WHERE narrows rows, HAVING keeps qualifying groups"
+        }
+      ]
+    },
+    {
+      "id": "sql-joins",
+      "category": "databases",
+      "front": "What do INNER, LEFT, RIGHT and FULL JOIN return?",
+      "back": [
+        {
+          "type": "text",
+          "content": "INNER JOIN keeps only rows that match on both sides. LEFT JOIN keeps every row from the left table, filling NULLs where the right side has no match. RIGHT JOIN is the mirror image. FULL JOIN keeps everything from both sides, with NULLs wherever either side is missing."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT e.name, d.name AS department\nFROM employees e\nLEFT JOIN departments d ON d.id = e.department_id;\n-- every employee appears; department is NULL when unassigned",
+          "caption": "LEFT JOIN keeps all left rows"
+        }
+      ]
+    },
+    {
+      "id": "sql-second-salary",
+      "category": "databases",
+      "front": "How do you find the second-highest salary?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Sort descending, skip the first row, take one. The trap is ties: if two people share the top salary, OFFSET still skips only one row, so this can return the top salary again. DENSE_RANK handles ties correctly."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT DISTINCT salary\nFROM employees\nORDER BY salary DESC\nLIMIT 1 OFFSET 1;",
+          "caption": "Simple version, wrong when the top salary is tied"
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT salary FROM (\n  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS r\n  FROM employees\n) ranked WHERE r = 2;",
+          "caption": "Tie-safe version"
+        }
+      ]
+    },
+    {
+      "id": "sql-duplicates",
+      "category": "databases",
+      "front": "How do you find duplicate values in a column?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Group by the column and keep the groups with more than one row. This is the standard interview answer for finding duplicate emails, usernames, or any value that should be unique."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT email, COUNT(*) AS times\nFROM users\nGROUP BY email\nHAVING COUNT(*) > 1;",
+          "caption": "Groups of more than one row are the duplicates"
+        }
+      ]
+    },
+    {
+      "id": "sql-delete-truncate-drop",
+      "category": "databases",
+      "front": "What is the difference between DELETE, TRUNCATE and DROP?",
+      "back": [
+        {
+          "type": "text",
+          "content": "DELETE removes selected rows, supports WHERE, fires triggers, and can be rolled back, but logs every row so it is slow on big tables. TRUNCATE removes all rows at once, is fast, resets identity counters, and takes no WHERE clause. DROP deletes the table itself, structure included."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "DELETE FROM sessions WHERE last_seen < '2024-01-01';\nTRUNCATE sessions;\nDROP TABLE sessions;",
+          "caption": "Selective rows, all rows, the whole table"
+        }
+      ]
+    },
+    {
+      "id": "sql-union",
+      "category": "databases",
+      "front": "What is the difference between UNION and UNION ALL?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Both stack result sets, so both queries must return the same number of columns with compatible types. UNION removes duplicate rows, which costs a sort. UNION ALL keeps everything and is faster, so prefer it whenever duplicates are impossible or harmless."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT email FROM customers\nUNION ALL\nSELECT email FROM newsletter_signups;",
+          "caption": "UNION ALL avoids the dedupe sort"
+        }
+      ]
+    },
+    {
+      "id": "sql-count-star",
+      "category": "databases",
+      "front": "What is the difference between COUNT(*), COUNT(col) and COUNT(DISTINCT col)?",
+      "back": [
+        {
+          "type": "text",
+          "content": "COUNT(*) counts rows, NULLs included. COUNT(col) counts non-NULL values in that column, so the two disagree exactly when the column has NULLs. COUNT(DISTINCT col) counts each distinct non-NULL value once."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT COUNT(*) AS rows,\n       COUNT(phone) AS with_phone,\n       COUNT(DISTINCT city) AS cities\nFROM users;",
+          "caption": "Rows, non-NULL phones, distinct cities"
+        }
+      ]
+    },
+    {
+      "id": "sql-null",
+      "category": "databases",
+      "front": "Why does `WHERE col != 'x'` miss rows, and what else breaks on NULL?",
+      "back": [
+        {
+          "type": "text",
+          "content": "NULL means unknown, so any comparison with it is unknown rather than true, and the row is filtered out. That is why `!=` silently drops NULL rows and why you must write IS NULL instead of `= NULL`. Two related traps: NOT IN returns nothing at all if the list contains a NULL, and every aggregate except COUNT(*) ignores NULLs."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT * FROM employees WHERE manager_id IS NULL;\n-- finds people with no manager; = NULL would find nobody\n\nSELECT * FROM employees WHERE id NOT IN (1, 2, NULL);\n-- returns zero rows: the NULL poisons the whole test",
+          "caption": "IS NULL, and the NOT IN NULL trap"
+        }
+      ]
+    },
+    {
+      "id": "sql-subquery-vs-join",
+      "category": "databases",
+      "front": "When do you use a subquery, and what is a correlated subquery?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A plain subquery computes a value the outer query needs, like comparing against an average. A correlated subquery references the outer query and re-runs per row, which is expressive but often slow. When both work, a JOIN is usually clearer and lets the planner do more."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "-- correlated: runs once per employee row\nSELECT name FROM employees e\nWHERE salary > (\n  SELECT AVG(salary) FROM employees WHERE department_id = e.department_id\n);",
+          "caption": "Correlated subquery against the employee's own department"
+        }
+      ]
+    },
+    {
+      "id": "sql-exists-vs-in",
+      "category": "databases",
+      "front": "EXISTS or IN: which should you pick?",
+      "back": [
+        {
+          "type": "text",
+          "content": "EXISTS stops at the first match and is NULL-safe, which makes it the default for semi-joins against another table. IN is fine for a short literal list, but NOT IN is dangerous: one NULL in the list makes the whole predicate unknown and returns nothing."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT name FROM customers c\nWHERE EXISTS (\n  SELECT 1 FROM orders o WHERE o.customer_id = c.id\n);",
+          "caption": "EXISTS short-circuits and ignores NULLs safely"
+        }
+      ]
+    },
+    {
+      "id": "sql-window-ranking",
+      "category": "databases",
+      "front": "What is the difference between ROW_NUMBER, RANK and DENSE_RANK?",
+      "back": [
+        {
+          "type": "text",
+          "content": "All three number rows inside each PARTITION, ordered by the ORDER BY clause. ROW_NUMBER gives every row a unique number even on ties. RANK gives tied rows the same number and then skips, so 1, 2, 2, 4. DENSE_RANK also shares numbers on ties but never skips, so 1, 2, 2, 3."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT name, salary,\n  ROW_NUMBER() OVER (ORDER BY salary DESC) AS rn,\n  RANK() OVER (ORDER BY salary DESC) AS r,\n  DENSE_RANK() OVER (ORDER BY salary DESC) AS dr\nFROM employees;",
+          "caption": "Same ordering, three tie behaviours"
+        }
+      ]
+    },
+    {
+      "id": "sql-cte",
+      "category": "databases",
+      "front": "What is a CTE, and why use one instead of a subquery?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A Common Table Expression names a temporary result set with WITH so the main query reads top-down instead of inside-out. The same CTE can be referenced twice without repeating it, and a recursive CTE can walk hierarchies like org charts. It is optimisation-neutral in most databases: readability is the point."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "WITH big_depts AS (\n  SELECT department_id FROM employees\n  GROUP BY department_id HAVING COUNT(*) > 10\n)\nSELECT * FROM employees\nWHERE department_id IN (SELECT department_id FROM big_depts);",
+          "caption": "Name the intermediate result, then use it"
+        }
+      ]
+    },
+    {
+      "id": "sql-group-by",
+      "category": "databases",
+      "front": "What rule governs which columns may appear with GROUP BY?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Every selected column must either be aggregated or appear in the GROUP BY list, otherwise the database cannot know which row's value to show for the group. Grouping by several columns produces one row per combination."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT department, location, COUNT(*) AS headcount\nFROM employees\nGROUP BY department, location;",
+          "caption": "Both bare columns are grouped, COUNT is aggregated"
+        }
+      ]
+    },
+    {
+      "id": "sql-keys",
+      "category": "databases",
+      "front": "What is the difference between a primary key, a foreign key and a UNIQUE constraint?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A primary key uniquely identifies each row: one per table, never NULL. A foreign key references another table's primary key and makes the database reject dangling references, which is what keeps joins trustworthy. UNIQUE also forbids duplicates but permits NULLs and identifies nothing."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "CREATE TABLE orders (\n  id INT PRIMARY KEY,\n  customer_id INT REFERENCES customers(id),\n  order_no TEXT UNIQUE NOT NULL\n);",
+          "caption": "Identity, referential integrity, no duplicates"
+        }
+      ]
+    },
+    {
+      "id": "sql-self-join",
+      "category": "databases",
+      "front": "What is a self join, and when do you reach for one?",
+      "back": [
+        {
+          "type": "text",
+          "content": "A self join joins a table to itself, which requires aliases so the two roles stay distinct. The classic case is a hierarchy stored in one table, like employees pointing at their manager's row in the same table."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT e.name AS employee, m.name AS manager\nFROM employees e\nLEFT JOIN employees m ON m.id = e.manager_id;",
+          "caption": "Aliases give the same table two roles"
+        }
+      ]
+    },
+    {
+      "id": "sql-top-per-group",
+      "category": "databases",
+      "front": "How do you get the top earner in each department?",
+      "back": [
+        {
+          "type": "text",
+          "content": "LIMIT applies to the whole result, not to each group, so the pattern is a window function partitioned by the group, then keep rank one. PARTITION BY restarts the numbering per department, which is the part GROUP BY cannot do."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT name, department, salary FROM (\n  SELECT name, department, salary,\n    ROW_NUMBER() OVER (\n      PARTITION BY department ORDER BY salary DESC\n    ) AS rn\n  FROM employees\n) ranked WHERE rn = 1;",
+          "caption": "Number within each department, keep the first"
+        }
+      ]
+    },
+    {
+      "id": "sql-like",
+      "category": "databases",
+      "front": "How does LIKE matching work, and what hurts it?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Percent matches any run of characters, underscore matches exactly one. A leading percent prevents index use, so `LIKE '%term'` scans. Match a literal percent or underscore with an ESCAPE character."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT * FROM products WHERE name LIKE 'Pro%';\n-- 'Pro', 'Product', 'Pro_2000' all match\n\nSELECT * FROM products WHERE code LIKE '50\\_%' ESCAPE '\\';\n-- matches codes starting with a literal 50_",
+          "caption": "Prefix search, then escaping a literal underscore"
+        }
+      ]
+    },
+    {
+      "id": "sql-distinct",
+      "category": "databases",
+      "front": "What does DISTINCT do with one column versus several?",
+      "back": [
+        {
+          "type": "text",
+          "content": "DISTINCT dedupes whole result rows, not individual columns. With one column you get each value once; with several you get each combination once. When you want counts per value rather than the values themselves, GROUP BY is the clearer tool."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT DISTINCT city FROM users;\nSELECT DISTINCT city, country FROM users;",
+          "caption": "Unique values, then unique combinations"
+        }
+      ]
+    },
+    {
+      "id": "sql-case",
+      "category": "databases",
+      "front": "What does a CASE expression do?",
+      "back": [
+        {
+          "type": "text",
+          "content": "CASE computes a value row by row from conditions, like an if/else inside the query. It works anywhere a value is allowed: SELECT lists, ORDER BY, even GROUP BY. Always include ELSE unless you want unmatched rows to become NULL."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT name, salary,\n  CASE\n    WHEN salary >= 100000 THEN 'senior'\n    WHEN salary >= 60000 THEN 'mid'\n    ELSE 'junior'\n  END AS band\nFROM employees;",
+          "caption": "Searched CASE buckets every row"
+        }
+      ]
+    },
+    {
+      "id": "sql-order-limit",
+      "category": "databases",
+      "front": "How do you paginate with ORDER BY and LIMIT, and what goes wrong?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Sort, then take a page with LIMIT and OFFSET. Two traps: ties in the sort key make rows drift between pages, so add the primary key as a final tiebreaker; and large offsets still scan the skipped rows, so deep pages get slow and keyset pagination takes over."
+        },
+        {
+          "type": "code",
+          "language": "sql",
+          "code": "SELECT id, name FROM users\nORDER BY created_at DESC, id DESC\nLIMIT 20 OFFSET 40;",
+          "caption": "Tiebreaker keeps pages stable"
+        }
+      ]
     }
   ]
 }
