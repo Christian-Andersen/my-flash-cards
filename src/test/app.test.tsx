@@ -296,8 +296,9 @@ describe("the deck is shuffled", () => {
     // Same session, same card count, but a different permutation. The 1-in-8!
     // chance of two seeds agreeing is why this compares the whole order and
     // not a single card.
-    expect(fullOrder()).not.toEqual(before);
-    expect(fullOrder()).toHaveLength(before.length);
+    const after = fullOrder();
+    expect(after).not.toEqual(before);
+    expect(after).toHaveLength(before.length);
   });
 
   it("reshuffles on reset", () => {
