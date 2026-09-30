@@ -32,9 +32,9 @@
       "groupSlug": "dev-dependencies"
     },
     {
-      "description": "Hold TypeScript below v7: typescript-eslint v8 peers on typescript >=4.8.4 <6.1.0, so v7 (the native tsgo rewrite) breaks type-aware lint. Revisit when typescript-eslint supports it",
+      "description": "Hold TypeScript back. Revisit when typescript-eslint supports it",
       "matchPackageNames": ["typescript"],
-      "allowedVersions": "<7"
+      "allowedVersions": "<6"
     }
   ]
 }
