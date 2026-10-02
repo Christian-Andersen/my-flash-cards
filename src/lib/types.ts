@@ -1,10 +1,10 @@
 /**
  * Shape of the card data and the module the build script generates from
- * `cards.json`. See `scripts/build-cards.mjs` for the validation rules that
+ * `cards.json`. See `scripts/build-cards.ts` for the validation rules that
  * produce a value assignable to {@link Card}.
  */
 
-/** Accent tokens a category may use. Kept in sync with `CATEGORY_ACCENTS`. */
+/** Accent tokens a category may use. Kept in sync with `ACCENT_STYLES`. */
 export type AccentName =
   "amber" | "emerald" | "rose" | "sky" | "teal" | "violet";
 

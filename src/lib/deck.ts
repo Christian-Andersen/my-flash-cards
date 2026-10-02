@@ -1,7 +1,7 @@
 /**
  * Runtime lookup helpers over the generated deck.
  *
- * The deck itself is generated at build time by `scripts/build-cards.mjs` and
+ * The deck itself is generated at build time by `scripts/build-cards.ts` and
  * imported statically, so the app ships with no data fetch and no loading
  * state. These helpers only index it.
  */
