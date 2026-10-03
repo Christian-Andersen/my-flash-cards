@@ -56,7 +56,11 @@ function mulberry32(seed: number): () => number {
  */
 export function newSeed(): number {
   const values = new Uint32Array(1);
-  globalThis.crypto?.getRandomValues(values);
+  try {
+    globalThis.crypto?.getRandomValues(values);
+  } catch {
+    // No usable CSPRNG: fall through with the zeroed buffer.
+  }
   return values[0] ?? 0;
 }
 
