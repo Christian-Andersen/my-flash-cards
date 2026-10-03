@@ -56,7 +56,7 @@ export default tseslint.config(
   {
     // Tests deliberately feed malformed values to prove runtime validation,
     // which requires casts the strict rules would otherwise reject.
-    files: ["src/**/*.test.ts"],
+    files: ["src/**/*.test.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
