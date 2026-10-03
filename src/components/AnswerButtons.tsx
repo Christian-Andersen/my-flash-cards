@@ -1,5 +1,3 @@
-import { useCallback } from "preact/hooks";
-
 import type { Answer } from "../lib/study";
 
 type AnswerButtonsProps = {
@@ -15,13 +13,6 @@ type AnswerButtonsProps = {
  * keyboard listener already lives.
  */
 export function AnswerButtons({ onAnswer }: AnswerButtonsProps) {
-  const grade = useCallback(
-    (answer: Answer) => () => {
-      onAnswer(answer);
-    },
-    [onAnswer],
-  );
-
   return (
     <div
       role="group"
@@ -30,7 +21,7 @@ export function AnswerButtons({ onAnswer }: AnswerButtonsProps) {
     >
       <button
         type="button"
-        onClick={grade("got-it")}
+        onClick={() => onAnswer("got-it")}
         className="border-got/40 bg-got/10 text-got hover:bg-got/20 flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors"
       >
         Got it
@@ -40,7 +31,7 @@ export function AnswerButtons({ onAnswer }: AnswerButtonsProps) {
       </button>
       <button
         type="button"
-        onClick={grade("missed")}
+        onClick={() => onAnswer("missed")}
         className="border-missed/40 bg-missed/10 text-missed hover:bg-missed/20 flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors"
       >
         Didn&apos;t know
