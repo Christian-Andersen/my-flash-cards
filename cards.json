@@ -79,6 +79,31 @@
       "id": "language-design",
       "label": "Language Design",
       "accent": "rose"
+    },
+    {
+      "id": "zig",
+      "label": "Zig",
+      "accent": "amber"
+    },
+    {
+      "id": "rust",
+      "label": "Rust",
+      "accent": "orange"
+    },
+    {
+      "id": "go",
+      "label": "Go",
+      "accent": "cyan"
+    },
+    {
+      "id": "react",
+      "label": "React",
+      "accent": "blue"
+    },
+    {
+      "id": "data-tech",
+      "label": "Data Technician",
+      "accent": "indigo"
     }
   ],
   "cards": [
@@ -2394,6 +2419,583 @@
           "language": "sql",
           "code": "SELECT id, name FROM users\nORDER BY created_at DESC, id DESC\nLIMIT 20 OFFSET 40;",
           "caption": "Tiebreaker keeps pages stable"
+        }
+      ]
+    },
+    {
+      "id": "zig-comptime",
+      "category": "zig",
+      "front": "What is `comptime` in Zig and when would you use it?",
+      "back": [
+        {
+          "type": "text",
+          "content": "`comptime` executes code at compile time rather than runtime. This enables generic programming, compile-time reflection, constant evaluation, and zero-cost abstractions. It's one of Zig's core features for metaprogramming."
+        },
+        {
+          "type": "code",
+          "language": "zig",
+          "caption": "Using comptime for generic functions",
+          "code": "fn max(comptime T: type, a: T, b: T) T {\n    return if (a > b) a else b;\n}\n\npub fn main() void {\n    const x = max(i32, 10, 20);\n    const y = max(f64, 1.5, 2.7);\n}"
+        }
+      ]
+    },
+    {
+      "id": "zig-arrays-slices",
+      "category": "zig",
+      "front": "What's the difference between arrays, slices, and pointers in Zig?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- Arrays: `[N]T` have a fixed size known at compile time, stored inline.\n- Slices: `[]T` are fat pointers containing both a pointer to data and a length (runtime known).\n- Pointers: `*T` is a single pointer to one element, `[*]T` is a pointer to many elements (no length)."
+        },
+        {
+          "type": "code",
+          "language": "zig",
+          "code": "const arr: [5]u32 = [1,2,3,4,5]; // fixed size\nconst slice: []const u32 = &arr; // fat pointer, length 5\nconst ptr: *const u32 = &arr[0]; // single element pointer"
+        }
+      ]
+    },
+    {
+      "id": "zig-error-handling",
+      "category": "zig",
+      "front": "How does error handling work in Zig?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Zig uses explicit error sets rather than exceptions. Functions can return `!T` (error union) meaning either an error from their error set or a `T` value. Use `try` to propagate, `catch` to handle, or `unwrap` style. This makes error paths explicit and zero-cost."
+        },
+        {
+          "type": "code",
+          "language": "zig",
+          "code": "const FileError = error{NotFound, PermissionDenied};\n\nfn readFile(path: []const u8) FileError![]const u8 {\n    // ...\n    return FileError.NotFound;\n}\n\npub fn main() void {\n    const data = readFile(\"test.txt\") catch \"default\";\n}"
+        }
+      ]
+    },
+    {
+      "id": "zig-memory",
+      "category": "zig",
+      "front": "How does Zig handle memory allocation?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Zig has no implicit allocations - you must pass an allocator explicitly. This gives full control over memory. Common allocators: `std.heap.page_allocator`, `std.heap.GeneralPurposeAllocator`, or custom ones. You also have `defer` and `errdefer` for cleanup."
+        },
+        {
+          "type": "code",
+          "language": "zig",
+          "code": "const allocator = std.heap.page_allocator;\nvar list = std.ArrayList(u8).init(allocator);\ndefer list.deinit(); // cleanup"
+        }
+      ]
+    },
+    {
+      "id": "zig-optionals",
+      "category": "zig",
+      "front": "What are optionals in Zig and how do you work with them?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Optionals are `?T` meaning either `null` or a `T` value. Use `.?` to unwrap (panics if null in debug), `orelse` to provide default, or `if (optional) |val|` for safe unwrapping. This is compile-time enforced."
+        },
+        {
+          "type": "code",
+          "language": "zig",
+          "code": "var maybe: ?u32 = null;\nmaybe = 42;\nif (maybe) |val| {\n    std.debug.print(\"{}\\n\", .{val});\n}"
+        }
+      ]
+    },
+    {
+      "id": "rust-ownership",
+      "category": "rust",
+      "front": "Explain Rust's ownership system. What are the three rules?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Ownership is Rust's memory management without GC:\n1. Each value has an owner.\n2. There can only be one owner at a time.\n3. When the owner goes out of scope, the value is dropped.\nThis prevents data races and use-after-free at compile time."
+        }
+      ]
+    },
+    {
+      "id": "rust-borrowing",
+      "category": "rust",
+      "front": "What's the difference between borrowing with & and &mut?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- `&T` is an immutable reference - read-only, can have many immutable refs simultaneously.\n- `&mut T` is a mutable reference - read/write, only one mutable ref at a time.\nThe borrow checker enforces this to prevent data races."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "code": "fn main() {\n    let mut s = String::from(\"hello\");\n    let r1 = &s; // ok\n    let r2 = &s; // ok - multiple immutable\n    // let r3 = &mut s; // error!\n    println!(\"{} {}\", r1, r2);\n    let r3 = &mut s; // ok after immutable borrows end\n    r3.push_str(\" world\");\n}"
+        }
+      ]
+    },
+    {
+      "id": "rust-lifetimes",
+      "category": "rust",
+      "front": "What are lifetimes in Rust and when are they needed?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Lifetimes tell the compiler how long references should be valid. They're needed when the compiler can't infer reference relationships. Lifetime annotations (`'a`) ensure references don't outlive the data they point to. Most of the time, lifetime elision handles them automatically."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "code": "fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {\n    if x.len() > y.len() { x } else { y }\n}"
+        }
+      ]
+    },
+    {
+      "id": "rust-traits",
+      "category": "rust",
+      "front": "What are traits in Rust? How do they compare to interfaces?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Traits define shared behavior - similar to interfaces in other languages. They allow for polymorphism via trait objects (`dyn Trait`) or generics (`impl Trait` / trait bounds). Traits can have default implementations, associated types, and can be implemented for types you don't own (orphan rule)."
+        },
+        {
+          "type": "code",
+          "language": "rust",
+          "code": "trait Display {\n    fn format(&self) -> String;\n}\n\nimpl Display for i32 {\n    fn format(&self) -> String {\n        format!(\"{}\", self)\n    }\n}"
+        }
+      ]
+    },
+    {
+      "id": "rust-option-result",
+      "category": "rust",
+      "front": "Explain `Option<T>` and `Result<T,E>`. When would you use each?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- `Option<T>`: Represents optional value - Some(T) or None. Used when absence is expected (e.g., looking up a key).\n- `Result<T,E>`: Represents success or failure - Ok(T) or Err(E). Used for operations that can fail (I/O, parsing).\nBoth force explicit handling - no null pointers or exceptions."
+        }
+      ]
+    },
+    {
+      "id": "rust-move-vs-copy",
+      "category": "rust",
+      "front": "What's the difference between types that implement Copy vs Clone?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- `Copy`: Bitwise copy - assignment copies the value without transferring ownership. Duplicates are implicit. Types are `Copy` if they're small, stack-allocated, and have no destructors (e.g., integers, booleans).\n- `Clone`: Explicit duplication via `.clone()` method. Can be expensive. `Copy` is a subset of `Clone`."
+        }
+      ]
+    },
+    {
+      "id": "go-goroutines",
+      "category": "go",
+      "front": "What are goroutines and how do they differ from threads?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Goroutines are lightweight, concurrent functions. They differ from OS threads: much smaller stack (starts ~2KB, grows), multiplexed onto OS threads by Go runtime (M:N scheduler), cheaper to create/destroy, and communicate via channels rather than shared memory. You can run thousands+ concurrently."
+        },
+        {
+          "type": "code",
+          "language": "go",
+          "code": "go func() {\n    fmt.Println(\"Hello from goroutine\")\n}()"
+        }
+      ]
+    },
+    {
+      "id": "go-channels",
+      "category": "go",
+      "front": "What are channels in Go? Buffered vs unbuffered?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Channels are typed conduits for communication between goroutines, following CSP model. Unbuffered channels (`make(chan T)`) block sender until receiver ready - synchronous. Buffered channels (`make(chan T, n)`) have capacity n - sender blocks when full, receiver when empty. Use `select` to multiplex."
+        },
+        {
+          "type": "code",
+          "language": "go",
+          "code": "ch := make(chan int, 2)\nch <- 1\nch <- 2\n// ch <- 3 // blocks if no receiver\nfmt.Println(<-ch)"
+        }
+      ]
+    },
+    {
+      "id": "go-slices",
+      "category": "go",
+      "front": "How do slices work in Go? What happens when you append?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Slices are references to array segments: `[]T` contains pointer, length, capacity. When appending (`append()`) if capacity is enough, it reuses underlying array; otherwise it allocates new larger array and copies elements. Slices share underlying array - modifying affects others."
+        },
+        {
+          "type": "code",
+          "language": "go",
+          "code": "s := []int{1,2,3}\ns2 := s[1:2] // shares array\ns2[0] = 99\nfmt.Println(s) // [1,99,3]"
+        }
+      ]
+    },
+    {
+      "id": "go-maps",
+      "category": "go",
+      "front": "How do maps work in Go? Are they thread-safe?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Maps are hash tables. Zero value is nil. Use `make()` to initialize. Reading/writing from multiple goroutines concurrently is NOT thread-safe - race conditions occur. Use `sync.Map` or `sync.RWMutex` for concurrent access. Check existence with comma-ok idiom."
+        },
+        {
+          "type": "code",
+          "language": "go",
+          "code": "m := make(map[string]int)\nm[\"foo\"] = 1\nval, ok := m[\"bar\"] // ok false if missing"
+        }
+      ]
+    },
+    {
+      "id": "go-interfaces",
+      "category": "go",
+      "front": "What are interfaces in Go? How does interface satisfaction work?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Interfaces define behavior via method signatures. A type satisfies an interface implicitly - no `implements` keyword. This enables duck typing. Empty interface `interface{}` accepts any type. Interfaces hold value and type; type assertions and type switches extract concrete types."
+        },
+        {
+          "type": "code",
+          "language": "go",
+          "code": "type Reader interface {\n    Read(p []byte) (n int, err error)\n}\n// Any type with Read method satisfies Reader"
+        }
+      ]
+    },
+    {
+      "id": "go-defer-panic-recover",
+      "category": "go",
+      "front": "Explain defer, panic, and recover in Go.",
+      "back": [
+        {
+          "type": "text",
+          "content": "- `defer`: Executes function when surrounding function returns - LIFO order. Used for cleanup (close files). Arguments evaluated at defer time.\n- `panic`: Stops normal execution, unwinds stack, runs defers. Used for unrecoverable errors.\n- `recover`: Regains control in deferred function after panic. Only useful in defer; returns nil if no panic."
+        }
+      ]
+    },
+    {
+      "id": "go-error-handling",
+      "category": "go",
+      "front": "How does error handling work in Go? Why no exceptions?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Go returns errors explicitly as values (usually last return value, `error` interface). No exceptions - forces developers to handle errors immediately and visibly. This leads to more explicit, predictable code. Errors are values you can inspect, wrap with `fmt.Errorf`/`errors.Is`, etc."
+        }
+      ]
+    },
+    {
+      "id": "react-components",
+      "category": "react",
+      "front": "What are React components? Functional vs Class components?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Components are reusable UI building blocks. Functional components are JavaScript functions returning JSX - preferred now, use Hooks for state/effects. Class components extend `React.Component`, use `render()`, lifecycle methods (`componentDidMount`, etc.) - legacy. Modern React favors functional components + Hooks."
+        }
+      ]
+    },
+    {
+      "id": "react-hooks",
+      "category": "react",
+      "front": "What are React Hooks? Explain useState, useEffect, useMemo, useCallback.",
+      "back": [
+        {
+          "type": "text",
+          "content": "Hooks let functional components use state/lifecycle. Rules: only call at top level, only in React functions.\n- `useState`: State management, returns `[state, setState]`.\n- `useEffect`: Side effects (data fetching, subscriptions), runs after render. Dependencies array controls execution.\n- `useMemo`: Memoizes computed value to avoid expensive recalculations.\n- `useCallback`: Memoizes function to prevent unnecessary re-renders of children."
+        }
+      ]
+    },
+    {
+      "id": "react-virtual-dom",
+      "category": "react",
+      "front": "What is the Virtual DOM and how does React use it?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Virtual DOM is a lightweight in-memory representation of real DOM. When state changes, React creates new VDOM tree, diffs against previous (reconciliation), then batches minimal updates to real DOM. This is faster than direct DOM manipulation. React Fiber is the current reconciliation engine."
+        }
+      ]
+    },
+    {
+      "id": "react-props-vs-state",
+      "category": "react",
+      "front": "What's the difference between props and state?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- Props (properties): Read-only, passed from parent to child, unidirectional. Used for configuration.\n- State: Mutable, managed internally by component, triggers re-render when changed via setter. Used for component-specific data that changes over time."
+        }
+      ]
+    },
+    {
+      "id": "react-jsx",
+      "category": "react",
+      "front": "What is JSX? How is it compiled?",
+      "back": [
+        {
+          "type": "text",
+          "content": "JSX is a syntax extension that lets you write HTML-like code in JavaScript. It's not HTML - gets compiled to `React.createElement()` calls (via Babel/TypeScript). Benefits: type safety, JavaScript power in templates, better debugging."
+        },
+        {
+          "type": "code",
+          "language": "jsx",
+          "code": "<div className=\"foo\">Hello</div>\n// compiles to\nReact.createElement('div', {className: 'foo'}, 'Hello')"
+        }
+      ]
+    },
+    {
+      "id": "react-reconciliation",
+      "category": "react",
+      "front": "What is reconciliation in React?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Reconciliation is React's diffing algorithm to determine minimal DOM updates. Keys are important - help identify elements in lists across renders, avoiding unnecessary re-renders/mounts. Uses heuristic O(n) based on assumptions (different element types = full rebuild, same type = update props)."
+        }
+      ]
+    },
+    {
+      "id": "react-effects-deps",
+      "category": "react",
+      "front": "What are dependency arrays in useEffect and why are they important?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Dependency array tells React when to re-run effect. Empty `[]` runs once (mount). With values, runs when any change. Missing array runs after every render (bad for performance). ESLint `exhaustive-deps` catches missing deps - important to avoid stale closures."
+        }
+      ]
+    },
+    {
+      "id": "react-refs",
+      "category": "react",
+      "front": "What are refs in React? When would you use them?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Refs give access to DOM nodes or mutable values that don't trigger re-renders. Use `useRef` (or `createRef` in classes). Use cases: focus inputs, measure DOM, store timer IDs, integrate with third-party libraries. Avoid overusing - prefer declarative approach."
+        }
+      ]
+    },
+    {
+      "id": "react-context",
+      "category": "react",
+      "front": "What is React Context? When should you use it vs props drilling?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Context provides way to pass data through component tree without props drilling. Good for theme, auth, locale. Created with `createContext`, consumed with `useContext`. Avoid overusing for frequent updates - can cause unnecessary re-renders. Consider state libraries (Zustand, Redux) for complex global state."
+        }
+      ]
+    },
+    {
+      "id": "react-server-components",
+      "category": "react",
+      "front": "What are React Server Components (RSC)?",
+      "back": [
+        {
+          "type": "text",
+          "content": "RSC run on server, render to HTML/serialized form. Benefits: zero client JS for server parts, direct DB access, faster initial load. Server Components cannot use hooks (state, effects). Client Components (`'use client'`) are interactive. Can compose - pass Server Components as children to Client Components."
+        }
+      ]
+    },
+    {
+      "id": "dt-sql-basics",
+      "category": "data-tech",
+      "front": "What are the different types of SQL joins and when would you use each?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- INNER JOIN: Rows that match in both tables.\n- LEFT (OUTER) JOIN: All from left, matching from right (NULL if no match).\n- RIGHT (OUTER) JOIN: All from right, matching from left.\n- FULL (OUTER) JOIN: All rows from both, NULL where no match.\n- CROSS JOIN: Cartesian product.\n- SELF JOIN: Join table to itself."
+        }
+      ]
+    },
+    {
+      "id": "dt-normalization",
+      "category": "data-tech",
+      "front": "Explain database normalization (1NF, 2NF, 3NF).",
+      "back": [
+        {
+          "type": "text",
+          "content": "1NF: Atomic values, no repeating groups.\n2NF: 1NF + no partial dependencies (all non-key attributes depend on full primary key).\n3NF: 2NF + no transitive dependencies (non-key doesn't depend on other non-key). BCNF is stricter. Normalization reduces redundancy, improves data integrity."
+        }
+      ]
+    },
+    {
+      "id": "dt-etl-vs-elt",
+      "category": "data-tech",
+      "front": "What's the difference between ETL and ELT?",
+      "back": [
+        {
+          "type": "text",
+          "content": "ETL (Extract, Transform, Load): Extract data, transform in staging (clean/shape), load to warehouse. Good for compliance, legacy systems.\nELT (Extract, Load, Transform): Extract, load raw to warehouse, transform using warehouse compute (dbt). More flexible, leverages modern cloud warehouses (Snowflake, BigQuery)."
+        }
+      ]
+    },
+    {
+      "id": "dt-data-cleaning",
+      "category": "data-tech",
+      "front": "What steps would you take to clean dirty data?",
+      "back": [
+        {
+          "type": "text",
+          "content": "1. Profile - understand structure, missing values, outliers, duplicates.\n2. Handle missing data - impute, drop, flag based on context.\n3. Remove/fix duplicates.\n4. Standardize formats (dates, phone, addresses, case).\n5. Validate against rules (ranges, constraints).\n6. Handle outliers - investigate, cap/winsorize, or remove if errors.\n7. Document transformations for reproducibility."
+        }
+      ]
+    },
+    {
+      "id": "dt-keys",
+      "category": "data-tech",
+      "front": "Explain primary key, foreign key, composite key, and unique key.",
+      "back": [
+        {
+          "type": "text",
+          "content": "- Primary Key: Uniquely identifies row, cannot be NULL, one per table.\n- Foreign Key: References primary key in another table, enforces referential integrity.\n- Composite Key: Two+ columns together form unique identifier.\n- Unique Key: Ensures uniqueness, can have NULL values (multiple NULLs allowed in most DBs)."
+        }
+      ]
+    },
+    {
+      "id": "dt-aggregations",
+      "category": "data-tech",
+      "front": "What aggregate functions and window functions have you used?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Aggregates: COUNT, SUM, AVG, MIN, MAX, GROUP_CONCAT. Used with GROUP BY/HAVING.\nWindow functions: ROW_NUMBER(), RANK(), DENSE_RANK(), LAG(), LEAD(), SUM() OVER(), AVG() OVER(). Perform calculations across rows without collapsing groups - useful for running totals, rankings, comparisons."
+        }
+      ]
+    },
+    {
+      "id": "dt-data-types",
+      "category": "data-tech",
+      "front": "Common data types and when to use them?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Numeric: INT, BIGINT, DECIMAL (precise for money), FLOAT/DOUBLE. Strings: VARCHAR (variable), CHAR (fixed), TEXT. Dates: DATE, TIME, TIMESTAMP, DATETIME. Boolean: BOOLEAN/BOOL. Others: JSON, UUID. Choose smallest appropriate type for storage/performance."
+        }
+      ]
+    },
+    {
+      "id": "dt-sql-performance",
+      "category": "data-tech",
+      "front": "How would you optimize a slow SQL query?",
+      "back": [
+        {
+          "type": "text",
+          "content": "1. EXPLAIN/ANALYZE query plan.\n2. Add indexes on WHERE/JOIN/ORDER BY columns.\n3. Avoid SELECT * - only needed columns.\n4. Filter early (WHERE before joins when possible).\n5. Use appropriate joins, avoid cartesian products.\n6. Consider partitioning for large tables.\n7. Rewrite subqueries as CTEs or joins.\n8. Avoid functions on indexed columns in WHERE."
+        }
+      ]
+    },
+    {
+      "id": "dt-data-warehouse",
+      "category": "data-tech",
+      "front": "What is a data warehouse vs data lake vs data mart?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- Data Warehouse: Structured, processed data for BI/analytics (schema-on-write). Optimized for SQL queries (Snowflake, BigQuery, Redshift).\n- Data Lake: Raw, unstructured+structured (schema-on-read). Stores everything (S3, ADLS).\n- Data Mart: Subset of warehouse focused on specific department/team. Faster, domain-specific."
+        }
+      ]
+    },
+    {
+      "id": "dt-stored-procedures",
+      "category": "data-tech",
+      "front": "What are stored procedures, views, and CTEs?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- View: Virtual table based on query - no data stored, always current. Simplifies complex joins.\n- CTE (Common Table Expression): Temporary named result set within query, improves readability, can be recursive. WITH clause.\n- Stored Procedure: Precompiled SQL code stored in DB, can take params, do DML. Good for complex logic, security, reuse."
+        }
+      ]
+    },
+    {
+      "id": "dt-import-export",
+      "category": "data-tech",
+      "front": "How would you import/export large datasets?",
+      "back": [
+        {
+          "type": "text",
+          "content": "CSV/TSV: COPY command (Postgres), bq load (BigQuery), bulk insert. Parquet/JSON efficient. Consider chunking, batching, compression. Handle encoding (UTF-8), delimiters, quotes. Validate row counts, spot check. For very large: use cloud-native tools, avoid row-by-row processing."
+        }
+      ]
+    },
+    {
+      "id": "dt-data-integrity",
+      "category": "data-tech",
+      "front": "How do you ensure data quality and integrity?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Constraints: NOT NULL, UNIQUE, CHECK, FK. Tests: row counts, referential integrity, null rates, distributions. Deduplication logic. Data profiling. Versioning/lineage (dbt tests, Great Expectations). Logging errors, quarantine bad records. Validation at ingestion + ongoing monitoring."
+        }
+      ]
+    },
+    {
+      "id": "dt-tools",
+      "category": "data-tech",
+      "front": "Common data tools - when would you use them?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- SQL: Core for querying.\n- Excel/Sheets: Ad-hoc, small data, reports.\n- Python (pandas): Cleaning, transformation, automation, API calls.\n- dbt: SQL-based transformations, testing, docs.\n- Airflow: Orchestration/workflows.\n- Power BI/Tableau: Visualization/dashboarding.\n- Git: Version control for SQL/models."
+        }
+      ]
+    },
+    {
+      "id": "dt-erd",
+      "category": "data-tech",
+      "front": "What is an ERD and why is it useful?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Entity Relationship Diagram shows entities (tables), attributes (columns), relationships (1:1, 1:M, M:M). Useful for database design, documenting schema, understanding data model, onboarding, troubleshooting joins. Tools: dbdiagram.io, Lucidchart, DBeaver."
+        }
+      ]
+    },
+    {
+      "id": "dt-slowly-changing",
+      "category": "data-tech",
+      "front": "What are Slowly Changing Dimensions (SCDs)? Types 1, 2, 3?",
+      "back": [
+        {
+          "type": "text",
+          "content": "Handle changing dimension data over time.\nSCD Type 1: Overwrite - lose history (simple, small storage).\nSCD Type 2: Add new row with effective dates (valid_from, valid_to, is_current) - preserves full history.\nSCD Type 3: Add new column for previous value - limited history.\nType 2 most common for historical reporting."
+        }
+      ]
+    },
+    {
+      "id": "dt-interview-behavioral",
+      "category": "data-tech",
+      "front": "Tell me about a time you found and fixed a data issue.",
+      "back": [
+        {
+          "type": "text",
+          "content": "STAR method: Situation (context), Task (goal), Action (steps taken - investigate, reproduce, root cause analysis, fix, validation), Result (impact - accuracy improved, saved time, prevented bad report). Emphasize data validation, documentation."
+        }
+      ]
+    },
+    {
+      "id": "dt-accuracy-vs-completeness",
+      "category": "data-tech",
+      "front": "What's the difference between data accuracy and completeness?",
+      "back": [
+        {
+          "type": "text",
+          "content": "- Accuracy: Data reflects reality/correct values (e.g., customer age is correct).\n- Completeness: All required records/fields present (no missing values). Both critical for quality. Can be accurate but incomplete, or complete but inaccurate."
+        }
+      ]
+    },
+    {
+      "id": "dt-terminology",
+      "category": "data-tech",
+      "front": "Define: dataset, record, field, cardinality, granularity.",
+      "back": [
+        {
+          "type": "text",
+          "content": "- Dataset: Collection of related data.\n- Record/Row: Single observation/entity.\n- Field/Column: Attribute of record.\n- Cardinality: Uniqueness - high cardinality = many unique values, low = few.\n- Granularity: Level of detail (daily vs monthly sales - daily is finer granularity)."
         }
       ]
     }
