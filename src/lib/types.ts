@@ -61,11 +61,6 @@ export type Card = {
   readonly back: readonly Block[];
 };
 
-export type Deck = {
-  readonly categories: readonly Category[];
-  readonly cards: readonly Card[];
-};
-
 /** Narrowing helper: is this block a code snippet? */
 export function isCodeBlock(block: Block): block is CodeBlock {
   return block.type === "code";
