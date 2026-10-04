@@ -11,8 +11,6 @@ import { deckOrder } from "./shuffle";
 /** How a card was graded while its back was showing. */
 export type Answer = "got-it" | "missed";
 
-export const ANSWERS: readonly Answer[] = ["got-it", "missed"];
-
 export function isAnswer(value: unknown): value is Answer {
   return value === "got-it" || value === "missed";
 }
