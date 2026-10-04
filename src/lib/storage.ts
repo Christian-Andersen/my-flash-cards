@@ -11,6 +11,7 @@ import { newSeed } from "./shuffle";
 import {
   initialStudyState,
   isAnswer,
+  viewQueue,
   type DeckIndex,
   type StudyState,
 } from "./study";
@@ -30,7 +31,14 @@ import {
  */
 const STORAGE_KEY = "flashcards:study:v1";
 
-/** Guards against a corrupted payload declaring a runaway cursor. */
+/**
+ * A sanity ceiling on a declared cursor, ahead of the clamp to the real queue
+ * length in {@link loadStudy}.
+ *
+ * Cheap insurance against a payload carrying a cursor large enough to be worth
+ * rejecting on sight, so the arithmetic in the clamp is never handed a value
+ * from untrusted input.
+ */
 const MAX_CURSOR = 100_000;
 
 function storage(): Storage | null {
@@ -97,7 +105,7 @@ export function loadStudy(deck: DeckIndex): StudyState {
     }
   }
 
-  const cursor =
+  const stored =
     typeof parsed.cursor === "number" &&
     Number.isInteger(parsed.cursor) &&
     parsed.cursor >= 0 &&
@@ -105,15 +113,28 @@ export function loadStudy(deck: DeckIndex): StudyState {
       ? parsed.cursor
       : 0;
 
-  return {
+  const state: StudyState = {
     answers,
-    cursor,
+    cursor: stored,
     // Always a fresh seed: the shuffle is re-drawn on every load, so a reload
     // starts a new order rather than resuming the old one. A payload that used
     // to carry a seed is simply no longer read.
     seed: newSeed(),
     hidden: readHidden(parsed.hidden, deck),
   };
+
+  // Clamp to the queue, not just to MAX_CURSOR. A cursor can be in range and
+  // still point past the end: the deck shrank since the payload was written
+  // (a card was deleted or merged out of it), or cards the payload had graded
+  // `got it` now retire, or a category it saved as hidden no longer exists.
+  // Reading past the end yields no card, which the app renders as the empty
+  // state -- so a session with 160 cards still ungraded would claim the deck is
+  // finished. MAX_CURSOR alone cannot catch this, because a deck of any
+  // plausible size is far below it.
+  const length = viewQueue(state, deck).length;
+  return length === 0
+    ? { ...state, cursor: 0 }
+    : { ...state, cursor: Math.min(stored, length - 1) };
 }
 
 /**

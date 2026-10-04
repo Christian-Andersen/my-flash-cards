@@ -66,14 +66,23 @@ describe("loadStudy", () => {
   });
 
   it("round-trips a saved session", () => {
+    // A deck of its own, because this fixture needs a cursor that is genuinely
+    // in range: hiding `y` in DECK leaves only card `a`, which is graded `got it`,
+    // so the queue is empty and any cursor is past the end. That is the
+    // clamping case below, not the round-trip case, and mixing the two in one
+    // fixture is what let it pass unnoticed.
+    const deck: DeckIndex = {
+      ids: ["a", "b", "c", "d"],
+      categoryOf: { a: "x", b: "y", c: "y", d: "y" },
+    };
     const state: StudyState = {
-      answers: { a: "got-it", b: "missed" },
+      answers: { b: "got-it", c: "missed" },
       cursor: 1,
       seed: SEED,
-      hidden: ["y"],
+      hidden: ["x"],
     };
     saveStudy(state);
-    const loaded = loadStudy(DECK);
+    const loaded = loadStudy(deck);
     // The seed is the one field that does not come back: it is re-drawn, so
     // every load deals a new order. Everything else is restored verbatim.
     expect(loaded.answers).toEqual(state.answers);
@@ -156,6 +165,37 @@ describe("loadStudy", () => {
       });
       expect(loadStudy(DECK).cursor).toBe(0);
     }
+  });
+
+  it("clamps a cursor that points past the end of the queue", () => {
+    // The realistic case: the deck shrank since the payload was written, so a
+    // cursor that was in range is now past the end. Reading past the end yields
+    // no card, and the app renders that as the empty state -- so an unclamped
+    // cursor reports a deck with cards still ungraded as finished.
+    storage.setItem(
+      KEY,
+      JSON.stringify({ answers: {}, cursor: 2, hidden: [] }),
+    );
+
+    // Queue is a, b, c. Cursor 2 is the last index, so this one is in range.
+    expect(loadStudy(DECK).cursor).toBe(2);
+
+    // One card retired: the queue is b, c and index 2 no longer exists.
+    storage.setItem(
+      KEY,
+      JSON.stringify({ answers: { a: "got-it" }, cursor: 2, hidden: [] }),
+    );
+    expect(loadStudy(DECK).cursor).toBe(1);
+  });
+
+  it("clamps to zero when the restored queue is empty", () => {
+    // Everything graded got it, or every category hidden: there is no index to
+    // clamp to, so the cursor has to be 0 rather than left dangling.
+    storage.setItem(
+      KEY,
+      JSON.stringify({ answers: {}, cursor: 2, hidden: ["x", "y"] }),
+    );
+    expect(loadStudy(DECK).cursor).toBe(0);
   });
 
   it("draws a new shuffle on every load, ignoring any stored seed", () => {
