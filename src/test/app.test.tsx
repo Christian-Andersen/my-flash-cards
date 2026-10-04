@@ -102,12 +102,18 @@ describe("deck rendering", () => {
     expect(showAnswer()).toBeTruthy();
     expect(visibleQuestion().length).toBeGreaterThan(0);
 
-    // The badge is rendered from the deck's declared categories. Which one is
-    // on screen depends on the shuffle, so check it is one of the real ones.
-    const labels = categories.map((category) => category.label);
-    expect(
-      labels.some((label) => document.body.textContent?.includes(label)),
-    ).toBe(true);
+    // The badge is rendered from the deck's declared categories, and both faces
+    // carry one for the card they show. Which category it is depends on the
+    // shuffle, so this checks every rendered badge names a declared category
+    // rather than that one particular label is present -- the old form passed on
+    // a single substring match anywhere in the body, including the settings list
+    // of every category name.
+    const rendered = [...document.querySelectorAll("span")]
+      .map((span) => span.textContent?.trim())
+      .filter((text): text is string => text !== undefined && text !== "");
+    const labels = new Set(categories.map((category) => category.label));
+
+    expect(rendered.filter((text) => labels.has(text)).length).toBe(2);
   });
 
   it("hides the answer until the card is flipped", () => {
