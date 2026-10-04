@@ -186,6 +186,7 @@ src/
     SettingsView.tsx       category toggles and the keyboard reference
     StudyControls.tsx      previous / next / reset
     ProgressBar.tsx        the graded / unvisited bar
+    InlineText.test.tsx    what the prose markup renders as
   lib/
     types.ts               the shape of the generated card data
     study.ts               pure reducer: grading, queueing, filtering, progress
@@ -193,14 +194,24 @@ src/
     storage.ts             localStorage load/save, with validation
     keyboard.ts            the shortcut guards shared by both key handlers
     deck.ts                runtime lookups over the generated deck
-  components/InlineText.test.tsx  what the prose markup renders as
-  test/app.test.tsx        end-to-end study flow in jsdom
+    study.test.ts          the reducer's rules, in plain Node
+    storage.test.ts        load, save, and the corrupt-payload paths
+    keyboard.test.ts       the shortcut guards
+  test/
+    app.test.tsx           end-to-end study flow in jsdom
+    markdown.test.tsx      the deck's own prose, rendered for real
   generated/               build output (gitignored)
 ```
 
 `study.ts` holds the rules and is pure, so the grading, retirement, filtering and
 queue behaviour is tested without rendering anything. `app.test.tsx` then covers
 the same flow through the real DOM.
+
+`markdown.test.tsx` is the odd one out: it renders every text block in
+`cards.json` and asserts the deck's own prose contains no leftover Markdown
+markers. `cards.json` is authored in a Markdown subset, and the format cannot
+check its own output, so a malformed marker would otherwise reach an answer as a
+literal asterisk or hyphen rather than failing anything.
 
 ## Notes on a couple of decisions
 
