@@ -103,6 +103,37 @@ describe("loadStudy", () => {
     ]);
   });
 
+  it("restores a grade whose card id is an Object.prototype key", () => {
+    // `__proto__` is a legal card id: the build only requires a non-empty
+    // string. Assigning to it on a plain object literal goes through the
+    // inherited setter, so the write vanishes and the grade is lost on every
+    // reload. The payload is written as JSON, so `__proto__` arrives as a real
+    // own property and the read is fine -- only the copy into the live state
+    // has to be made safe.
+    const deck: DeckIndex = {
+      ids: ["__proto__", "ok"],
+      categoryOf: { __proto__: "x", ok: "y" },
+    };
+    // Computed keys, so this fixture really carries the property. A literal
+    // `__proto__:` in an object initialiser is itself discarded by the same
+    // setter, which would make the fixture test nothing.
+    storage.setItem(
+      KEY,
+      JSON.stringify({
+        answers: { ["__proto__"]: "got-it", ok: "missed" },
+        cursor: 0,
+        hidden: [],
+      }),
+    );
+
+    const loaded = loadStudy(deck);
+
+    // An own key, so the grade is actually there.
+    expect(Object.keys(loaded.answers)).toEqual(["__proto__", "ok"]);
+    expect(loaded.answers["__proto__"]).toBe("got-it");
+    expect(Object.getPrototypeOf(loaded.answers)).toBe(Object.prototype);
+  });
+
   it("does not resume the previous order after a reload", () => {
     // The behaviour the user asked for: a refresh is a new shuffle, not a
     // continuation of the last one. Only the grades carry over.

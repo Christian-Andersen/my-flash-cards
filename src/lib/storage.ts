@@ -98,13 +98,22 @@ export function loadStudy(deck: DeckIndex): StudyState {
   }
   if (!isRecord(parsed)) return initialStudyState(newSeed());
 
-  const answers: Record<string, Answer> = {};
+  // Built with fromEntries rather than by assigning keys as the loop goes.
+  // `answers["__proto__"] = value` on a plain object literal invokes the
+  // inherited setter, so the write is silently discarded and no own key
+  // appears; fromEntries defines a real own property for every entry. Card ids
+  // are author-supplied and the build only requires them to be non-empty
+  // strings, so `__proto__` is a legal id that would lose its grade on every
+  // reload. Reduce the code below never hits this, because a computed key in an
+  // object literal creates an own property.
+  const restored: Array<readonly [string, Answer]> = [];
   if (isRecord(parsed.answers)) {
     for (const id of deck.ids) {
       const value = parsed.answers[id];
-      if (isAnswer(value)) answers[id] = value;
+      if (isAnswer(value)) restored.push([id, value]);
     }
   }
+  const answers = Object.fromEntries(restored);
 
   const stored =
     typeof parsed.cursor === "number" &&
