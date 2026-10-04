@@ -12,6 +12,7 @@ import {
   initialStudyState,
   isAnswer,
   viewQueue,
+  type Answer,
   type DeckIndex,
   type StudyState,
 } from "./study";
@@ -97,7 +98,7 @@ export function loadStudy(deck: DeckIndex): StudyState {
   }
   if (!isRecord(parsed)) return initialStudyState(newSeed());
 
-  const answers: Record<string, "got-it" | "missed"> = {};
+  const answers: Record<string, Answer> = {};
   if (isRecord(parsed.answers)) {
     for (const id of deck.ids) {
       const value = parsed.answers[id];
