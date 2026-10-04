@@ -6,10 +6,12 @@
  * `- ` bullet list as run-on hyphens.
  *
  * Supported, because the deck uses it: `**bold**`, `*italic*`, `` `code` ``,
- * `- ` and `* ` bullet lists, and `1. ` numbered lists. A list is one block
- * from its first marker to its last item; blank lines inside a text block
- * separate paragraphs in the source but are not authored anywhere in the deck,
- * so the block is rendered as a single list.
+ * `- ` and `* ` bullet lists, and `1. ` numbered lists.
+ *
+ * Each line is its own block, so a run of list lines becomes one list and a
+ * non-list line between two runs splits them. No text block in the deck
+ * contains a blank line, so a paragraph break is not something this has to
+ * model.
  *
  * Everything is emitted as Preact children, never as an HTML string, so no
  * markup in `cards.json` can reach the page. Shiki output is the only trusted
@@ -82,7 +84,7 @@ function spans(text: string): Span[] {
 }
 
 /**
- * Tokenises a text block into inline spans, hard breaks, and list items.
+ * Tokenises a text block into prose lines and list items.
  *
  * Splitting on newlines first is what makes a `- ` line a list item rather than
  * a literal hyphen: the markers are only meaningful at the start of a line.
@@ -154,7 +156,7 @@ function SpanNode({
 }
 
 /**
- * Collects a run of item tokens into one list element.
+ * Which element a run of items is wrapped in.
  *
  * `ul` for bullets and `ol` for numbers, because the ordinals are meaningful to
  * a screen reader and copying the answer should carry them across.
@@ -203,9 +205,9 @@ export function InlineText({ text }: InlineTextProps) {
   const flushList = () => {
     if (list.length === 0) return;
     // A list cannot mix bullets with numbers, so the tag comes from the first
-    // item and a stray mixed list renders as the dominant kind.
-    const first = list[0];
-    const Tag = first === undefined ? "ul" : listTag(first.ordinal);
+    // item and a stray mixed list renders as the dominant kind. The cast is
+    // because the length check above already established it is there.
+    const Tag = listTag((list[0] as Extract<Token, { kind: "item" }>).ordinal);
     children.push(
       <Tag
         key={`list-${children.length}`}
