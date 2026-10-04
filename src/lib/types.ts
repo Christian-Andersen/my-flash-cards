@@ -6,7 +6,16 @@
 
 /** Accent tokens a category may use. Kept in sync with `ACCENT_STYLES`. */
 export type AccentName =
-  "amber" | "emerald" | "rose" | "sky" | "teal" | "violet";
+  | "amber"
+  | "blue"
+  | "cyan"
+  | "emerald"
+  | "indigo"
+  | "orange"
+  | "rose"
+  | "sky"
+  | "teal"
+  | "violet";
 
 export type Category = {
   /** Stable slug, referenced by {@link Card.category}. Unique within a deck. */

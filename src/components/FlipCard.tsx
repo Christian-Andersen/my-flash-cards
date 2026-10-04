@@ -11,7 +11,7 @@ import { ACCENT_STYLES } from "./accents";
 import { AnswerButtons } from "./AnswerButtons";
 import { CategoryBadge } from "./CategoryBadge";
 import { CodeSnippet } from "./CodeSnippet";
-import { InlineText } from "./InlineText";
+import { hasList, InlineText } from "./InlineText";
 
 type FlipCardProps = {
   readonly card: Card;
@@ -26,15 +26,21 @@ type FlipCardProps = {
 function AnswerBlocks({ blocks }: { readonly blocks: readonly Block[] }) {
   return (
     <div className="space-y-3">
-      {blocks.map((block, i) =>
-        block.type === "code" ? (
-          <CodeSnippet key={i} block={block} />
+      {blocks.map((block, i) => {
+        if (block.type === "code") return <CodeSnippet key={i} block={block} />;
+
+        // A list cannot live inside a <p>, so a block that renders one gets a
+        // <div>. See hasList.
+        return hasList(block.content) ? (
+          <div key={i} className="text-ink-muted leading-relaxed text-pretty">
+            <InlineText text={block.content} />
+          </div>
         ) : (
           <p key={i} className="text-ink-muted leading-relaxed text-pretty">
             <InlineText text={block.content} />
           </p>
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }

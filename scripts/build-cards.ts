@@ -30,7 +30,11 @@ const THEME = "github-dark-default";
 
 const ACCENTS: ReadonlySet<string> = new Set<AccentName>([
   "amber",
+  "blue",
+  "cyan",
   "emerald",
+  "indigo",
+  "orange",
   "rose",
   "sky",
   "teal",

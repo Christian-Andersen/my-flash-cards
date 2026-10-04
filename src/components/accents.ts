@@ -20,10 +20,30 @@ export const ACCENT_STYLES: Readonly<Record<AccentName, AccentStyles>> = {
     dot: "bg-amber-400",
     edge: "from-amber-500/40",
   },
+  blue: {
+    chip: "border-blue-500/30 bg-blue-500/10 text-blue-300",
+    dot: "bg-blue-400",
+    edge: "from-blue-500/40",
+  },
+  cyan: {
+    chip: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
+    dot: "bg-cyan-400",
+    edge: "from-cyan-500/40",
+  },
   emerald: {
     chip: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
     dot: "bg-emerald-400",
     edge: "from-emerald-500/40",
+  },
+  indigo: {
+    chip: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300",
+    dot: "bg-indigo-400",
+    edge: "from-indigo-500/40",
+  },
+  orange: {
+    chip: "border-orange-500/30 bg-orange-500/10 text-orange-300",
+    dot: "bg-orange-400",
+    edge: "from-orange-500/40",
   },
   rose: {
     chip: "border-rose-500/30 bg-rose-500/10 text-rose-300",

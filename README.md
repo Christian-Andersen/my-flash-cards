@@ -25,8 +25,9 @@ static bundle, so it deploys to Cloudflare Pages with no server or worker.
   the counter shrinks as you work through it.
 - **Shuffled, and de-clustered** — the deck is dealt in a random order, spread so
   two cards from the same subject rarely land back to back. A plain shuffle of
-  this deck still averages about nine adjacent same-category pairs out of 103;
-  spreading cuts that to 0.15, and 88% of sessions get none at all.
+  this deck still averages about 141 adjacent same-category pairs out of 163
+  possible slots; spreading cuts that to 0.11, and 90% of sessions get none at
+  all.
 - **Settings page** — switch whole categories in and out of the deck. Progress on
   a hidden category is kept and reported, so turning one back on shows how far it
   had got. Categories are stored as a deny-list, so a new category added to
@@ -109,9 +110,14 @@ Notes on the format:
 - **`id`** must be unique and stable. It is the `localStorage` key, so
   renaming a card resets its saved progress.
 - **`category`** must match a declared category's `id`.
-- **`accent`** is one of `amber`, `emerald`, `rose`, `sky`, `teal`, `violet`.
-- **`back`** is a list of `text` and `code` blocks. In `text` blocks, wrapping
-  a word in backticks renders it as inline code.
+- **`accent`** is one of `amber`, `blue`, `cyan`, `emerald`, `indigo`, `orange`,
+  `rose`, `sky`, `teal`, `violet`. Adding a new one is a three-file change:
+  `AccentName` in `src/lib/types.ts`, `ACCENTS` in `scripts/build-cards.ts`, and
+  `ACCENT_STYLES` in `src/components/accents.ts`.
+- **`back`** is a list of `text` and `code` blocks. In `text` blocks a small
+  subset of Markdown is rendered: `**bold**`, `*italic*`, `` `inline code` ``,
+  and `-` / `1.` lists, where each list item is a line starting with the marker.
+  A `-` or `1.` in the middle of a line is just a character.
 - **`language`** is any Shiki language id, e.g. `ts`, `python`, `nix`, `bash`.
 
 The build validates all of this and reports every problem at once, so a typo
@@ -175,6 +181,7 @@ src/
   index.css                Tailwind theme, flip animation, Shiki styling
   components/
     FlipCard.tsx           the card, its two faces, and the grading buttons
+    InlineText.tsx         card prose: the Markdown subset, as elements
     ConfirmDialog.tsx      modal confirmation with a focus trap
     SettingsView.tsx       category toggles and the keyboard reference
     StudyControls.tsx      previous / next / reset
@@ -186,6 +193,7 @@ src/
     storage.ts             localStorage load/save, with validation
     keyboard.ts            the shortcut guards shared by both key handlers
     deck.ts                runtime lookups over the generated deck
+  components/InlineText.test.tsx  what the prose markup renders as
   test/app.test.tsx        end-to-end study flow in jsdom
   generated/               build output (gitignored)
 ```
