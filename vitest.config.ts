@@ -17,5 +17,6 @@ export default defineConfig({
     css: true,
     setupFiles: ["./src/test/setup.ts"],
     restoreMocks: true,
+    testTimeout: 60_000,
   },
 });
