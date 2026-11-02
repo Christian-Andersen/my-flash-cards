@@ -16,8 +16,11 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      # Pin v2: v3+ are composite actions that delegate to
+      # extractions/setup-crate, which is not mirrored on data.forgejo.org, so
+      # the runner fails to resolve it. v2 is a self-contained Node action.
       - name: Set up Just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v2
       # Every recipe in `just ci` runs a tool out of node_modules, so the
       # dependencies have to exist before the gate runs. `npm ci` installs the
       # exact tree in package-lock.json rather than re-resolving ranges.
@@ -37,8 +40,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      # v2, for the same reason as the `ci` job above.
       - name: Set up Just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v2
       - name: Install dependencies
         run: npm ci
       # `just build` runs the card generator and then vite, producing ./dist.
