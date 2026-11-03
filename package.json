@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Static flashcard app with card flipping, build-time syntax highlighting, and missed-card review.",
   "scripts": {
-    "cards": "node scripts/build-cards.ts",
+    "cards": "tsx scripts/build-cards.ts",
     "dev": "npm run cards && vite",
     "build": "npm run cards && vite build",
     "preview": "vite preview",
@@ -35,6 +35,7 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "shiki": "^4.4.3",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.70.1",
     "vite": "^8.3.1",

@@ -9,8 +9,9 @@
  *
  * Emits: src/generated/cards.ts
  *
- * Run with `node scripts/build-cards.ts`; Node strips the types, so there is
- * no compile step and the file is still typechecked by `just typecheck`.
+ * Run with `tsx scripts/build-cards.ts`; tsx strips the types, so there is no
+ * compile step and the file is still typechecked by `just typecheck`. Node's
+ * built-in type stripping is not available in the distro Node package.
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
