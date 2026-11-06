@@ -4,7 +4,7 @@
 #   just c       fast pre-commit gate: format check, lint, typecheck
 #   just t       full test suite
 #   just r       dev server
-#   just ci      c then t — what CI runs
+#   just ci      c then t — the full local gate
 
 alias c := check
 alias t := test
@@ -52,7 +52,7 @@ fmt-check:
 cards:
     npm run cards
 
-# Production build. The deploy job in .forgejo/workflows/ci.yml consumes this.
+# Production build into dist/.
 build: cards
     npm run build
 

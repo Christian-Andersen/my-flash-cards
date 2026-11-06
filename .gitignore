@@ -11,11 +11,6 @@ node_modules/
 # and on demand by `just cards`, so it is a build artifact, not a source file.
 src/generated/
 
-# Nix / direnv
-result
-result-*
-.direnv/
-
 # Environment
 .env
 .env.*

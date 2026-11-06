@@ -44,14 +44,12 @@ static bundle, so it deploys to Cloudflare Pages with no server or worker.
 
 ## Getting started
 
-The repo pins its toolchain with Nix and `direnv`, so `cd`ing in is enough:
-
 ```sh
-direnv allow   # once, to activate the flake
+npm install
 just r         # http://localhost:5173
 ```
 
-Without Nix, `npm install` is enough; only `just` is a convenience.
+`just` is optional; every recipe maps to an npm script in `package.json`.
 
 ## Commands
 
@@ -127,31 +125,6 @@ than rendering a broken card.
 Generated output lives in `src/generated/` and is gitignored — it is a build
 artifact, not a source file.
 
-## Continuous integration
-
-`.forgejo/workflows/ci.yml` runs the same gate locally and remotely:
-
-1. **`ci`** — `npm ci` then `just ci` (format, lint, typecheck, tests).
-2. **`update-and-deploy`** — only after `ci` passes: `npm ci`, `just build`,
-   then `wrangler pages deploy ./dist`.
-
-Everything runs inside `nix develop`, so CI and local development share one
-pinned toolchain. `flake.lock` is committed, so the `nixpkgs` revision is the
-same on every machine and every run.
-
-The deploy uses the separate `deploy` dev shell, which adds `wrangler` from
-the pinned flake. It is kept out of the default shell so `just r` does not
-pull a tool only CI needs. Calling the pinned binary also means the deploy is
-reproducible, rather than resolving whatever `npx` fetches at run time.
-
-The deploy job needs the two secrets `CLOUDFLARE_ACCOUNT_ID` and
-`CLOUDFLARE_API_TOKEN`, configured under **Settings → Actions → Secrets** in
-your Forgejo instance. The Pages project name is taken from the repository
-name; change it in the workflow if the project differs. The project has to
-exist before the first run — `wrangler pages deploy` fails outright otherwise
-— so create it in the dashboard, with `main` as the production branch to match
-the push trigger.
-
 ## Deploying to Cloudflare Pages
 
 Connect the repository in the Cloudflare dashboard with:
@@ -161,9 +134,6 @@ Connect the repository in the Cloudflare dashboard with:
 
 Or use `just build`, which runs the card generator first. The Node version
 must be 22 or newer; `engines` in `package.json` records that.
-
-If you would rather let Forgejo do the deploying, the workflow above already
-does it and you do not need a Pages build config at all.
 
 `public/_headers` sets cache and security headers. Hashed assets under
 `/assets/` are cached for a year and `index.html` is not cached, so a deploy
